@@ -1,60 +1,68 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
-export default function Login() {
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
+    const res = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        alert(data.message || "Error en login");
-        return;
+    if (res.ok) {
+      login(data);
+
+      // 🔥 REDIRECCIÓN POR ROL
+      switch (data.usuario.rol) {
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "RECEPCIONISTA":
+          navigate("/panel");
+          break;
+        case "TECNICO":
+          navigate("/tecnico");
+          break;
+        case "CLIENTE":
+          navigate("/cliente");
+          break;
+        default:
+          navigate("/login");
       }
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("usuario", JSON.stringify(data.usuario));
-
-      window.location.href = "/admin";
-
-    } catch (error) {
-      console.error(error);
-      alert("Error de conexión");
+    } else {
+      alert(data.mensaje);
     }
   };
 
   return (
-    <div>
-      <h2>Acceso</h2>
+    <form onSubmit={handleLogin}>
+      <input
+        type="email"
+        placeholder="Email"
+        onChange={(e) => setEmail(e.target.value)}
+      />
 
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="Correo electrónico"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <input
+        type="password"
+        placeholder="Contraseña"
+        onChange={(e) => setPassword(e.target.value)}
+      />
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button type="submit">Ingresar</button>
-      </form>
-    </div>
+      <button type="submit">Ingresar</button>
+    </form>
   );
 }
+
+export default Login;

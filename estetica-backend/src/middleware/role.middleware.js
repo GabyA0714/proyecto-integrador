@@ -1,16 +1,21 @@
-function autorizarRoles(...rolesPermitidos) {
+const autorizarRoles = (...rolesPermitidos) => {
   return (req, res, next) => {
-    // req.usuario viene del middleware verificarToken
-    if (!req.usuario || !req.usuario.rol) {
-      return res.status(401).json({ mensaje: "Usuario no autenticado" });
-    }
+    try {
+      const { rol } = req.usuario;
 
-    if (!rolesPermitidos.includes(req.usuario.rol)) {
-      return res.status(403).json({ mensaje: "No tienes permisos para acceder" });
-    }
+      // Verificar si el rol está permitido
+      if (!rolesPermitidos.includes(rol)) {
+        return res.status(403).json({
+          error: "Acceso denegado: no tenés permisos"
+        });
+      }
 
-    next();
+      next();
+
+    } catch (error) {
+      return res.status(500).json({ error: "Error en autorización" });
+    }
   };
-}
+};
 
 module.exports = autorizarRoles;
