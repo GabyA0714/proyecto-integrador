@@ -1,20 +1,21 @@
 const express = require("express");
-const cors = require("cors");
+const cors = require("cors"); // <-- 1. Importamos
 const app = express();
 
-app.use(cors());
+// --- MIDDLEWARES GLOBALES (Tienen que ir arriba de todo) ---
+app.use(cors()); // <-- 2. Habilitamos CORS antes que nada
 app.use(express.json());
 
+// --- RUTAS ---
 const authRoutes = require("./src/routes/auth.routes");
-const usuarioRoutes = require("./src/routes/usuario.routes");
-const clienteRoutes = require("./src/routes/cliente.routes");
-const servicioRoutes = require("./src/routes/servicio.routes");
-
 app.use("/api/auth", authRoutes);
-app.use("/api/usuarios", usuarioRoutes);
-app.use("/api/cliente", clienteRoutes);
-app.use("/api/servicio", servicioRoutes);
 
+// --- TEST ---
+app.get("/", (req, res) => {
+  res.send("API funcionando");
+});
+
+// --- SERVIDOR ---
 app.listen(3000, () => {
   console.log("Servidor corriendo en http://localhost:3000");
 });

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:3000/api/pacientes";
+const API = "http://localhost:3000/api/paciente";
 
 export const obtenerPacientes = async (token) => {
   const res = await axios.get(API, {

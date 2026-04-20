@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  obtenerClientes,
-  crearCliente,
-  actualizarCliente,
-  eliminarCliente
-} from "../api/cliente.api";
+  obtenerPacientes,
+  crearPaciente,
+  actualizarPaciente,
+  eliminarPaciente
+} from "../api/paciente.api";
 
-export default function ClientesAdmin() {
-  const [clientes, setClientes] = useState([]);
+export default function PacienteAdmin() {
+  const [pacientes, setPacientes] = useState([]);
   const [form, setForm] = useState({
     nombre: "",
     telefono: "",
@@ -17,17 +17,17 @@ export default function ClientesAdmin() {
   const [editId, setEditId] = useState(null);
   const token = localStorage.getItem("token");
 
-  const cargarClientes = async () => {
+  const cargarPacientes = async () => {
     try {
-      const data = await obtenerClientes(token);
-      setClientes(data);
+      const data = await obtenerPacientes(token);
+      setPacientes(data);
     } catch (error) {
       console.error(error);
     }
   };
 
   useEffect(() => {
-    cargarClientes();
+    cargarPacientes();
   }, []);
 
   const handleChange = (e) => {
@@ -39,9 +39,9 @@ export default function ClientesAdmin() {
 
     try {
       if (editId) {
-        await actualizarCliente(editId, form, token);
+        await actualizarPaciente(editId, form, token);
       } else {
-        await crearCliente(form, token);
+        await crearPaciente(form, token);
       }
 
       setForm({
@@ -51,7 +51,7 @@ export default function ClientesAdmin() {
       });
 
       setEditId(null);
-      cargarClientes();
+      cargarPacientes();
     } catch (error) {
       console.error(error);
     }
@@ -68,8 +68,8 @@ export default function ClientesAdmin() {
 
   const handleDelete = async (id) => {
     try {
-      await eliminarCliente(id, token);
-      cargarClientes();
+      await eliminarPaciente(id, token);
+      cargarPacientes();
     } catch (error) {
       console.error(error);
     }
@@ -77,7 +77,7 @@ export default function ClientesAdmin() {
 
   return (
     <div>
-      <h2>Clientes</h2>
+      <h2>Pacientes</h2>
 
       <form onSubmit={handleSubmit}>
         <input
@@ -117,7 +117,7 @@ export default function ClientesAdmin() {
         </thead>
 
         <tbody>
-          {clientes.map((c) => (
+          {pacientes.map((c) => (
             <tr key={c.id}>
               <td>{c.nombre}</td>
               <td>{c.email}</td>

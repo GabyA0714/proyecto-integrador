@@ -13,7 +13,7 @@ export default function UsuariosAdmin() {
     apellido: "",
     email: "",
     password: "",
-    rol: "CLIENTE"
+    rol: "PACIENTE"
   });
 
   const [editId, setEditId] = useState(null);
@@ -51,7 +51,7 @@ export default function UsuariosAdmin() {
         apellido: "",
         email: "",
         password: "",
-        rol: "CLIENTE"
+        rol: "PACIENTE"
       });
 
       setEditId(null);
@@ -127,7 +127,7 @@ export default function UsuariosAdmin() {
           <option value="ADMIN">ADMIN</option>
           <option value="RECEPCIONISTA">RECEPCIONISTA</option>
           <option value="TECNICO">TECNICO</option>
-          <option value="CLIENTE">CLIENTE</option>
+          <option value="PACIENTE">PACIENTE</option>
         </select>
 
         <button type="submit">

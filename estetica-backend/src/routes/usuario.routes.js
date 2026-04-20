@@ -12,6 +12,7 @@ const {
   eliminarUsuario
 } = require("../controllers/usuario.controller");
 
+// SOLO ADMIN puede ver usuarios
 router.get(
   "/",
   verificarToken,
@@ -19,6 +20,7 @@ router.get(
   obtenerUsuarios
 );
 
+// SOLO ADMIN puede ver usuario por ID
 router.get(
   "/:id",
   verificarToken,
@@ -26,13 +28,13 @@ router.get(
   obtenerUsuarioPorId
 );
 
+// REGISTRO (SIN TOKEN)
 router.post(
   "/",
-  verificarToken,
-  autorizarRoles("ADMIN"),
   crearUsuario
 );
 
+// SOLO ADMIN puede actualizar
 router.put(
   "/:id",
   verificarToken,
@@ -40,6 +42,7 @@ router.put(
   actualizarUsuario
 );
 
+// SOLO ADMIN puede eliminar
 router.delete(
   "/:id",
   verificarToken,

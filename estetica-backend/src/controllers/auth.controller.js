@@ -2,9 +2,6 @@ const prisma = require("../config/prisma");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-// =========================
-// VALIDACIONES
-// =========================
 const validarEmail = (email) => {
   const regex = /\S+@\S+\.\S+/;
   return regex.test(email);
@@ -14,14 +11,10 @@ const validarPassword = (password) => {
   return password.length >= 6;
 };
 
-// =========================
-// REGISTER (solo CLIENTE)
-// =========================
 const register = async (req, res) => {
   try {
     const { nombre, apellido, email, password } = req.body;
 
-    // 1. Validaciones básicas
     if (!nombre || !apellido || !email || !password) {
       return res.status(400).json({ mensaje: "Todos los campos son obligatorios" });
     }
@@ -36,7 +29,6 @@ const register = async (req, res) => {
       });
     }
 
-    // 2. Verificar si ya existe
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { email }
     });
@@ -45,10 +37,8 @@ const register = async (req, res) => {
       return res.status(400).json({ mensaje: "El usuario ya existe" });
     }
 
-    // 3. Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 4. Crear usuario + cliente (TRANSACCIÓN 🔥)
     const nuevoUsuario = await prisma.$transaction(async (tx) => {
       const usuario = await tx.usuario.create({
         data: {
@@ -56,11 +46,11 @@ const register = async (req, res) => {
           apellido,
           email,
           password: passwordHash,
-          rol: "CLIENTE" // 🔥 clave: no se puede elegir rol
+          rol: "PACIENTE"
         }
       });
 
-      await tx.cliente.create({
+      await tx.paciente.create({
         data: {
           usuarioId: usuario.id,
           telefono: ""
@@ -71,7 +61,7 @@ const register = async (req, res) => {
     });
 
     res.status(201).json({
-      mensaje: "Cliente registrado correctamente",
+      mensaje: "Paciente registrado correctamente",
       usuario: {
         id: nuevoUsuario.id,
         nombre: nuevoUsuario.nombre,
@@ -86,36 +76,28 @@ const register = async (req, res) => {
   }
 };
 
-// =========================
-// LOGIN
-// =========================
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Validaciones
     if (!email || !password) {
       return res.status(400).json({ mensaje: "Email y contraseña obligatorios" });
     }
 
-    // 2. Buscar usuario
     const usuario = await prisma.usuario.findUnique({
       where: { email }
     });
 
-    // 🔐 Mensaje genérico (seguridad)
     if (!usuario) {
       return res.status(401).json({ mensaje: "Credenciales inválidas" });
     }
 
-    // 3. Validar password
     const passwordValida = await bcrypt.compare(password, usuario.password);
 
     if (!passwordValida) {
       return res.status(401).json({ mensaje: "Credenciales inválidas" });
     }
 
-    // 4. Generar token
     const token = jwt.sign(
       {
         id: usuario.id,
@@ -147,7 +129,33 @@ const login = async (req, res) => {
   }
 };
 
+const perfil = async (req, res) => {
+  try {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuario.id },
+      select: {
+        id: true,
+        nombre: true,
+        apellido: true,
+        email: true,
+        rol: true
+      }
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    res.json(usuario);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: "Error al obtener perfil" });
+  }
+};
+
 module.exports = {
   register,
-  login
+  login,
+  perfil
 };

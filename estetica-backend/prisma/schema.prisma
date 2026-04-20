@@ -13,7 +13,7 @@ enum Rol {
   ADMIN
   RECEPCIONISTA
   TECNICO
-  CLIENTE
+  PACIENTE
 }
 
 enum EstadoTurno {
@@ -54,13 +54,13 @@ model Usuario {
   creadoEn  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cliente   Cliente?
+  paciente   Paciente?
   tecnico   Tecnico?
 
   @@index([email])
 }
 
-model Cliente {
+model Paciente {
   id        Int     @id @default(autoincrement())
   usuarioId Int     @unique
   telefono  String
@@ -119,7 +119,7 @@ model Servicio {
 
 model Turno {
   id         Int         @id @default(autoincrement())
-  clienteId  Int
+  pacienteId  Int
   tecnicoId  Int
   servicioId Int
 
@@ -134,14 +134,14 @@ model Turno {
   creadoEn  DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cliente  Cliente  @relation(fields: [clienteId], references: [id])
+  paciente Paciente  @relation(fields: [pacienteId], references: [id])
   tecnico  Tecnico  @relation(fields: [tecnicoId], references: [id])
   servicio Servicio @relation(fields: [servicioId], references: [id])
 
   pago Pago?
 
   @@index([tecnicoId, fechaInicio])
-  @@index([clienteId])
+  @@index([pacienteId])
 }
 
 model Pago {

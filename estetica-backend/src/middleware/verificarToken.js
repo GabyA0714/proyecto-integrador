@@ -1,12 +1,16 @@
 const jwt = require("jsonwebtoken");
 
 function verificarToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
+  const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
+  console.log("Authorization header:", authHeader); //debug
+
+  // 1. Validar que exista y tenga formato correcto
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ mensaje: "Token requerido" });
   }
 
+  // 2. Extraer token
   const token = authHeader.split(" ")[1];
 
   if (!token) {
@@ -14,9 +18,10 @@ function verificarToken(req, res, next) {
   }
 
   try {
+    // 3. Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Guardamos info del usuario en la request
+    // 4. Guardar usuario en request
     req.usuario = decoded;
 
     next();
