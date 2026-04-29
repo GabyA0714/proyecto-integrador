@@ -1,10 +1,21 @@
-function autorizarRoles(...rolesPermitidos) {
+const autorizarRoles = (...rolesPermitidos) => {
   return (req, res, next) => {
-    if (!rolesPermitidos.includes(req.usuario.rol)) {
-      return res.status(403).json({ mensaje: "No autorizado" });
-    }
-    next();
-  };
-}
+    try {
+      const { rol } = req.usuario; // Esto lo inyectó verificarToken justo antes
 
-module.exports = autorizarRoles;
+      // Verificar si el rol de la persona está en la lista permitida
+      if (!rolesPermitidos.includes(rol)) {
+        return res.status(403).json({
+          error: "Acceso denegado: no tenés permisos para esta acción"
+        });
+      }
+
+      next();
+
+    } catch (error) {
+      return res.status(500).json({ error: "Error en autorización" });
+    }
+  };
+};
+
+export default autorizarRoles;

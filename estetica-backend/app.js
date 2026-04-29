@@ -1,21 +1,22 @@
-const express = require("express");
-const cors = require("cors"); // <-- 1. Importamos
+import express from 'express';
+import cors from 'cors';
+import authRoutes from './src/routes/auth.routes.js';
+
 const app = express();
 
-// --- MIDDLEWARES GLOBALES (Tienen que ir arriba de todo) ---
-app.use(cors()); // <-- 2. Habilitamos CORS antes que nada
+// --- MIDDLEWARES GLOBALES ---
+app.use(cors());
 app.use(express.json());
 
 // --- RUTAS ---
-const authRoutes = require("./src/routes/auth.routes");
-app.use("/api/auth", authRoutes);
+app.use('/api/auth', authRoutes);
 
 // --- TEST ---
-app.get("/", (req, res) => {
-  res.send("API funcionando");
+app.get('/', (req, res) => {
+  res.send('API de Espacio Senda funcionando correctamente');
 });
 
 // --- SERVIDOR ---
 app.listen(3000, () => {
-  console.log("Servidor corriendo en http://localhost:3000");
+  console.log('Servidor corriendo en http://localhost:3000');
 });

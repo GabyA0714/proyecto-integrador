@@ -1,20 +1,25 @@
-const prisma = require("../config/prisma");
+import { PrismaClient } from '@prisma/client';
 
-const obtenerServicios = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const obtenerServicios = async (req, res) => {
   try {
-    const servicios = await prisma.servicio.findMany();
+    const servicios = await prisma.service.findMany({
+      include: { category: true } // Traemos la categoría para que el front tenga el nombre
+    });
     res.json(servicios);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-const obtenerServicioPorId = async (req, res) => {
+export const obtenerServicioPorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const servicio = await prisma.servicio.findUnique({
-      where: { id: Number(id) },
+    const servicio = await prisma.service.findUnique({
+      where: { id: String(id) },
+      include: { category: true }
     });
 
     if (!servicio) {
@@ -27,15 +32,16 @@ const obtenerServicioPorId = async (req, res) => {
   }
 };
 
-const crearServicio = async (req, res) => {
+export const crearServicio = async (req, res) => {
   try {
-    const { nombre, duracionMinutos, precio } = req.body;
+    // Agregamos categoryId porque tu schema lo requiere
+    const { nombre, defaultDurationMinutes, categoryId } = req.body; 
 
-    const servicio = await prisma.servicio.create({
+    const servicio = await prisma.service.create({
       data: {
-        nombre,
-        duracionMinutos: Number(duracionMinutos),
-        precio: Number(precio),
+        name: nombre,
+        defaultDurationMinutes: Number(defaultDurationMinutes),
+        categoryId: categoryId 
       },
     });
 
@@ -45,17 +51,18 @@ const crearServicio = async (req, res) => {
   }
 };
 
-const actualizarServicio = async (req, res) => {
+export const actualizarServicio = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, duracionMinutos, precio } = req.body;
+    const { nombre, defaultDurationMinutes, categoryId, active } = req.body;
 
-    const servicio = await prisma.servicio.update({
-      where: { id: Number(id) },
+    const servicio = await prisma.service.update({
+      where: { id: String(id) },
       data: {
-        nombre,
-        duracionMinutos: Number(duracionMinutos),
-        precio: Number(precio),
+        name: nombre,
+        defaultDurationMinutes: defaultDurationMinutes ? Number(defaultDurationMinutes) : undefined,
+        categoryId: categoryId,
+        active: active
       },
     });
 
@@ -65,24 +72,16 @@ const actualizarServicio = async (req, res) => {
   }
 };
 
-const eliminarServicio = async (req, res) => {
+export const eliminarServicio = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.servicio.delete({
-      where: { id: Number(id) },
+    await prisma.service.delete({
+      where: { id: String(id) },
     });
 
     res.json({ mensaje: "Servicio eliminado" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  obtenerServicios,
-  obtenerServicioPorId,
-  crearServicio,
-  actualizarServicio,
-  eliminarServicio,
 };

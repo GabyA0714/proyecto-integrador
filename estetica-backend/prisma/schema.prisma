@@ -9,152 +9,289 @@ datasource db {
 
 // --- ENUMS ---
 
-enum Rol {
+enum DocumentType {
+  DNI
+  PASSPORT
+  CUIL
+  CUIT
+}
+
+enum Role {
   ADMIN
-  RECEPCIONISTA
-  TECNICO
-  PACIENTE
+  RECEPTIONIST
+  PROFESSIONAL
+  PATIENT
 }
 
-enum EstadoTurno {
-  PENDIENTE
-  CONFIRMADO
-  EN_PROCESO
-  COMPLETADO
-  CANCELADO
-  AUSENTE
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 
-enum MetodoPago {
-  EFECTIVO
-  TRANSFERENCIA
-  TARJETA
+enum ExceptionType {
+  HOLIDAY
+  SICK_LEAVE
+  PERSONAL
+  OTHER
 }
 
-enum DiaSemana {
-  LUNES
-  MARTES
-  MIERCOLES
-  JUEVES
-  VIERNES
-  SABADO
-  DOMINGO
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  REFUNDED
 }
 
-// --- MODELOS ---
-
-model Usuario {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  apellido  String
-  email     String   @unique
-  password  String
-  rol       Rol
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  paciente   Paciente?
-  tecnico   Tecnico?
-
-  @@index([email])
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CREDIT_CARD
+  DEBIT_CARD
 }
 
-model Paciente {
-  id        Int     @id @default(autoincrement())
-  usuarioId Int     @unique
-  telefono  String
-  notas     String?
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  turnos  Turno[]
-
-  @@index([usuarioId])
+enum PaymentType {
+  DEPOSIT
+  FINAL_PAYMENT
+  FULL_PAYMENT
 }
 
-model Tecnico {
-  id           Int     @id @default(autoincrement())
-  usuarioId    Int     @unique
-  especialidad String?
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  usuario  Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  turnos   Turno[]
-  horarios Horario[]
-
-  @@index([usuarioId])
+enum SyncStatus {
+  SYNCHRONIZED
+  PENDING
+  FAILED
 }
 
-model Horario {
-  id         Int       @id @default(autoincrement())
-  tecnicoId  Int
-  dia        DiaSemana
-  horaInicio DateTime
-  horaFin    DateTime
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tecnico Tecnico @relation(fields: [tecnicoId], references: [id], onDelete: Cascade)
-
-  @@index([tecnicoId])
+enum AuditAction {
+  CREATE
+  UPDATE
+  CANCEL
+  RESCHEDULE
 }
 
-model Servicio {
-  id              Int     @id @default(autoincrement())
-  nombre          String
-  duracionMinutos Int
-  precio          Decimal @db.Decimal(10, 2)
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  turnos Turno[]
+enum Channel {
+  WHATSAPP
+  EMAIL
+  SMS
 }
 
-model Turno {
-  id         Int         @id @default(autoincrement())
-  pacienteId  Int
-  tecnicoId  Int
-  servicioId Int
-
-  fechaInicio DateTime
-  fechaFin    DateTime
-
-  estado EstadoTurno @default(PENDIENTE)
-
-  recordatorioEnviado Boolean @default(false)
-  notas               String?
-
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  paciente Paciente  @relation(fields: [pacienteId], references: [id])
-  tecnico  Tecnico  @relation(fields: [tecnicoId], references: [id])
-  servicio Servicio @relation(fields: [servicioId], references: [id])
-
-  pago Pago?
-
-  @@index([tecnicoId, fechaInicio])
-  @@index([pacienteId])
+enum LogStatus {
+  SENT
+  FAILED
+  READ
 }
 
-model Pago {
-  id        Int        @id @default(autoincrement())
-  turnoId   Int        @unique
-  monto     Decimal    @db.Decimal(10, 2)
-  metodo    MetodoPago
-  penalidad Boolean    @default(false)
+// --- MODELS ---
 
-  creadoEn  DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model People {
+  id           String       @id @default(uuid()) @db.Uuid
+  name         String
+  documentType DocumentType @map("document_type")
+  document     String
+  email        String       @unique
+  phone        String
+  createdAt    DateTime     @default(now()) @map("created_at")
 
-  turno Turno @relation(fields: [turnoId], references: [id])
+  user         User?
+  professional Professional?
+  patient      Patient?
 
-  @@index([turnoId])
+  @@map("people")
+}
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  peopleId        String    @unique @map("people_id") @db.Uuid
+  passwordHash    String    @map("password_hash")
+  role            Role
+  active          Boolean   @default(true)
+  lastLoginAt     DateTime? @map("last_login_at")
+
+  person          People    @relation(fields: [peopleId], references: [id], onDelete: Cascade)
+  createdAppointments Appointment[] @relation("CreatedBy")
+  audits          AppointmentAudit[]
+
+  @@map("users")
+}
+
+model Professional {
+  id               String    @id @default(uuid()) @db.Uuid
+  peopleId         String    @unique @map("people_id") @db.Uuid
+  specialty        String
+  bio              String?
+  googleCalendarId String?   @map("google_calendar_id")
+  active           Boolean   @default(true)
+
+  person           People    @relation(fields: [peopleId], references: [id], onDelete: Cascade)
+  services         ProfessionalService[]
+  schedules        RecurringSchedule[]
+  availabilities   Availability[]
+  exceptions       AvailabilityException[]
+
+  @@map("professionals")
+}
+
+model Patient {
+  id           String   @id @default(uuid()) @db.Uuid
+  peopleId     String   @unique @map("people_id") @db.Uuid
+  cuilCuit     String   @map("cuil_cuit")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  person       People   @relation(fields: [peopleId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@map("patients")
+}
+
+model ServiceCategory {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @unique
+  displayOrder Int       @map("display_order")
+
+  services     Service[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id                     String    @id @default(uuid()) @db.Uuid
+  categoryId             String    @map("category_id") @db.Uuid
+  name                   String
+  defaultDurationMinutes Int       @map("default_duration_minutes")
+  active                 Boolean   @default(true)
+
+  category               ServiceCategory @relation(fields: [categoryId], references: [id])
+  professionalServices   ProfessionalService[]
+
+  @@map("services")
+}
+
+model ProfessionalService {
+  id              String   @id @default(uuid()) @db.Uuid
+  professionalId  String   @map("professional_id") @db.Uuid
+  serviceId       String   @map("service_id") @db.Uuid
+  durationMinutes Int      @map("duration_minutes")
+  price           Decimal  @db.Decimal(10, 2)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  professional    Professional @relation(fields: [professionalId], references: [id])
+  service         Service      @relation(fields: [serviceId], references: [id])
+  appointments    Appointment[]
+
+  @@map("professional_services")
+}
+
+model RecurringSchedule {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  dayOfWeek      Int      @map("day_of_week")
+  startTime      DateTime @db.Time @map("start_time")
+  endTime        DateTime @db.Time @map("end_time")
+  active         Boolean  @default(true)
+
+  professional   Professional @relation(fields: [professionalId], references: [id])
+
+  @@map("recurring_schedule")
+}
+
+model Availability {
+  id             String   @id @default(uuid()) @db.Uuid
+  professionalId String   @map("professional_id") @db.Uuid
+  date           DateTime @db.Date
+  startTime      DateTime @db.Time @map("start_time")
+  endTime        DateTime @db.Time @map("end_time")
+  active         Boolean  @default(true)
+
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  appointments   Appointment[]
+
+  @@map("availability")
+}
+
+model AvailabilityException {
+  id             String        @id @default(uuid()) @db.Uuid
+  professionalId String        @map("professional_id") @db.Uuid
+  exceptionDate  DateTime      @db.Date @map("exception_date")
+  startTime      DateTime      @db.Time @map("start_time")
+  endTime        DateTime      @db.Time @map("end_time")
+  exceptionType  ExceptionType @map("exception_type")
+  reason         String?
+
+  professional   Professional  @relation(fields: [professionalId], references: [id])
+
+  @@map("availability_exception")
+}
+
+model Appointment {
+  id                    String            @id @default(uuid()) @db.Uuid
+  professionalServiceId String            @map("professional_service_id") @db.Uuid
+  availabilityId        String            @map("availability_id") @db.Uuid
+  patientId             String            @map("patient_id") @db.Uuid
+  createdByUserId       String            @map("created_by_user_id") @db.Uuid
+  startsAt              DateTime          @map("starts_at")
+  endsAt                DateTime          @map("ends_at")
+  status                AppointmentStatus @default(PENDING)
+  priceSnapshot         Decimal           @db.Decimal(10, 2) @map("price_snapshot")
+  discountAmount        Decimal?          @db.Decimal(10, 2) @map("discount_amount")
+  discountReason        String?           @map("discount_reason")
+  depositAmount         Decimal?          @db.Decimal(10, 2) @map("deposit_amount")
+  paymentStatus         PaymentStatus     @default(PENDING) @map("payment_status")
+  notes                 String?
+  googleEventId         String?           @map("google_event_id")
+  googleSyncStatus      SyncStatus        @default(PENDING) @map("google_sync_status")
+  createdAt             DateTime          @default(now()) @map("created_at")
+
+  professionalService   ProfessionalService @relation(fields: [professionalServiceId], references: [id])
+  availability          Availability        @relation(fields: [availabilityId], references: [id])
+  patient               Patient             @relation(fields: [patientId], references: [id])
+  creator               User                @relation("CreatedBy", fields: [createdByUserId], references: [id])
+  audits                AppointmentAudit[]
+  payments              Payment[]
+  reminders             ReminderLog[]
+
+  @@map("appointments")
+}
+
+model AppointmentAudit {
+  id            String            @id @default(uuid()) @db.Uuid
+  appointmentId String            @map("appointment_id") @db.Uuid
+  action        AuditAction
+  prevStatus    AppointmentStatus? @map("prev_status")
+  newStatus     AppointmentStatus @map("new_status")
+  performedBy   String            @map("performed_by") @db.Uuid
+  performedAt   DateTime          @default(now()) @map("performed_at")
+
+  appointment   Appointment       @relation(fields: [appointmentId], references: [id])
+  user          User              @relation(fields: [performedBy], references: [id])
+
+  @@map("appointment_audit")
+}
+
+model Payment {
+  id            String        @id @default(uuid()) @db.Uuid
+  appointmentId String        @map("appointment_id") @db.Uuid
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod @map("payment_method")
+  type          PaymentType   @map("payment_type")
+  paidAt        DateTime      @default(now()) @map("paid_at")
+  isRefund      Boolean       @default(false) @map("is_refund")
+
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id])
+
+  @@map("payments")
+}
+
+model ReminderLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  appointmentId String    @map("appointment_id") @db.Uuid
+  sentAt        DateTime  @default(now()) @map("sent_at")
+  channel       Channel
+  status        LogStatus
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@map("reminder_log")
 }

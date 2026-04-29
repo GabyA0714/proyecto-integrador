@@ -1,22 +1,21 @@
-const express = require("express");
-const router = express.Router();
-
-const verificarToken = require("../middleware/verificarToken");
-const autorizarRoles = require("../middleware/autorizarRoles");
-
-const {
+import express from 'express';
+import verificarToken from '../middleware/verificarToken.js';
+import autorizarRoles from '../middleware/autorizarRoles.js';
+import {
   obtenerUsuarios,
   obtenerUsuarioPorId,
   crearUsuario,
   actualizarUsuario,
   eliminarUsuario
-} = require("../controllers/usuario.controller");
+} from '../controllers/usuario.controller.js';
+
+const router = express.Router();
 
 // SOLO ADMIN puede ver usuarios
 router.get(
   "/",
   verificarToken,
-  autorizarRoles("ADMIN"),
+  autorizarRoles("ADMIN"), // Asumiendo que autorizarRoles exporta una función que recibe un rol
   obtenerUsuarios
 );
 
@@ -50,4 +49,4 @@ router.delete(
   eliminarUsuario
 );
 
-module.exports = router;
+export default router;

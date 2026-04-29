@@ -1,41 +1,42 @@
-const prisma = require("../config/prisma");
+import { PrismaClient } from '@prisma/client';
 
-const getDashboard = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const getDashboard = async (req, res) => {
   try {
-    // Fechas bien separadas (NO reutilizo el mismo Date)
     const inicioDia = new Date();
     inicioDia.setHours(0, 0, 0, 0);
 
     const finDia = new Date();
     finDia.setHours(23, 59, 59, 999);
 
-    // Turnos de hoy
-    const turnosHoy = await prisma.turno.count({
+    // Turnos de hoy buscando en 'startsAt'
+    const turnosHoy = await prisma.appointment.count({
       where: {
-        fechaInicio: {
+        startsAt: {
           gte: inicioDia,
           lte: finDia
         }
       }
     });
 
-    // Ingresos totales
-    const ingresos = await prisma.pago.aggregate({
+    // Ingresos totales buscando 'amount' en Payment
+    const ingresos = await prisma.payment.aggregate({
       _sum: {
-        monto: true
+        amount: true 
       }
     });
 
-    // Turnos cancelados
-    const cancelados = await prisma.turno.count({
+    // Turnos cancelados usando el Enum de tu schema
+    const cancelados = await prisma.appointment.count({
       where: {
-        estado: "CANCELADO"
+        status: "CANCELLED"
       }
     });
 
     res.json({
       turnosHoy,
-      ingresos: ingresos._sum.monto || 0,
+      ingresos: ingresos._sum.amount || 0,
       cancelados
     });
 
@@ -44,5 +45,3 @@ const getDashboard = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-module.exports = { getDashboard };

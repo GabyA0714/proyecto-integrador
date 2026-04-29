@@ -1,12 +1,12 @@
-const express = require("express");
+import express from 'express';
+import { getDashboard } from '../controllers/dashboard.controller.js';
+// Importamos los middlewares oficiales
+import verificarToken from '../middleware/verificarToken.js';
+import autorizarRoles from '../middleware/autorizarRoles.js';
+
 const router = express.Router();
 
-const { getDashboard } = require("../controllers/dashboard.controller");
+// Usamos la cadena de middlewares correcta
+router.get("/", verificarToken, autorizarRoles("ADMIN"), getDashboard);
 
-const auth = require("../middleware/auth.middleware");
-const role = require("../middleware/role.middleware");
-
-// SOLO ADMIN puede ver dashboard
-router.get("/", auth, role(["ADMIN"]), getDashboard);
-
-module.exports = router;
+export default router;

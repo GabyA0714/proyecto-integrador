@@ -1,10 +1,14 @@
-const prisma = require("../config/prisma");
+import { PrismaClient } from '@prisma/client';
 
-const obtenerPacientes = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const obtenerPacientes = async (req, res) => {
   try {
-    const pacientes = await prisma.paciente.findMany({
+    const pacientes = await prisma.patient.findMany({
       include: {
-        usuario: true,
+        person: {
+          include: { user: true } // Traemos los datos de la persona y de su usuario si tiene
+        }
       },
     });
     res.json(pacientes);
@@ -13,14 +17,14 @@ const obtenerPacientes = async (req, res) => {
   }
 };
 
-const obtenerPacientePorId = async (req, res) => {
+export const obtenerPacientePorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const paciente = await prisma.paciente.findUnique({
-      where: { id: Number(id) },
+    const paciente = await prisma.patient.findUnique({
+      where: { id: String(id) },
       include: {
-        usuario: true,
+        person: true
       },
     });
 
@@ -34,16 +38,17 @@ const obtenerPacientePorId = async (req, res) => {
   }
 };
 
-const crearPaciente = async (req, res) => {
+export const crearPaciente = async (req, res) => {
   try {
-    const { usuarioId, telefono, notas } = req.body;
+    // Para crear un paciente suelto, necesitamos vincularlo a una Persona existente
+    const { peopleId, cuilCuit } = req.body;
 
-    const paciente = await prisma.paciente.create({
+    const paciente = await prisma.patient.create({
       data: {
-        usuarioId,
-        telefono,
-        notas,
+        peopleId,
+        cuilCuit: cuilCuit || ""
       },
+      include: { person: true }
     });
 
     res.status(201).json(paciente);
@@ -52,16 +57,15 @@ const crearPaciente = async (req, res) => {
   }
 };
 
-const actualizarPaciente = async (req, res) => {
+export const actualizarPaciente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { telefono, notas } = req.body;
+    const { cuilCuit } = req.body;
 
-    const paciente = await prisma.paciente.update({
-      where: { id: Number(id) },
+    const paciente = await prisma.patient.update({
+      where: { id: String(id) },
       data: {
-        telefono,
-        notas,
+        cuilCuit
       },
     });
 
@@ -71,24 +75,16 @@ const actualizarPaciente = async (req, res) => {
   }
 };
 
-const eliminarPaciente = async (req, res) => {
+export const eliminarPaciente = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.paciente.delete({
-      where: { id: Number(id) },
+    await prisma.patient.delete({
+      where: { id: String(id) },
     });
 
     res.json({ mensaje: "Paciente eliminado" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-};
-
-module.exports = {
-  obtenerPacientes,
-  obtenerPacientePorId,
-  crearPaciente,
-  actualizarPaciente,
-  eliminarPaciente  ,
 };

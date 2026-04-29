@@ -1,16 +1,13 @@
-const express = require("express");
+import express from 'express';
+import { register, login, perfil } from '../controllers/auth.controller.js';
+import verificarToken from '../middleware/verificarToken.js'; 
+
 const router = express.Router();
 
-const { register, login } = require("../controllers/auth.controller");
-const verificarToken = require("../middleware/verificarToken");
+router.post('/register', register);
+router.post('/login', login);
 
-router.post("/register", register);
-router.post("/login", login);
+// ¡Ruta reactivada!
+router.get('/me', verificarToken, perfil);
 
-router.get("/me", verificarToken, (req, res) => {
-  res.json({
-    usuario: req.usuario
-  });
-});
-
-module.exports = router;
+export default router;

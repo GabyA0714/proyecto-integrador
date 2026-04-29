@@ -1,33 +1,37 @@
-const jwt = require("jsonwebtoken");
+import jwt from 'jsonwebtoken';
 
-function verificarToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-
-  console.log("Authorization header:", authHeader); //debug
-
-  // 1. Validar que exista y tenga formato correcto
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ mensaje: "Token requerido" });
-  }
-
-  // 2. Extraer token
-  const token = authHeader.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ mensaje: "Formato de token inválido" });
-  }
-
+const verificarToken = (req, res, next) => {
   try {
-    // 3. Verificar token
+    const authHeader = req.headers["authorization"];
+
+    // 1. Verificar que exista header
+    if (!authHeader) {
+      return res.status(401).json({ error: "Token requerido" });
+    }
+
+    // 2. Validar formato Bearer
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Formato de token inválido" });
+    }
+
+    // 3. Extraer token
+    const token = authHeader.split(" ")[1];
+
+    // 4. Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 4. Guardar usuario en request
-    req.usuario = decoded;
+    // 5. Guardar datos en request (con los nombres exactos que usamos en auth.controller)
+    req.usuario = {
+      id: decoded.id,
+      email: decoded.email,
+      rol: decoded.rol
+    };
 
     next();
-  } catch (error) {
-    return res.status(403).json({ mensaje: "Token inválido o expirado" });
-  }
-}
 
-module.exports = verificarToken;
+  } catch (error) {
+    return res.status(401).json({ error: "Token inválido o expirado" });
+  }
+};
+
+export default verificarToken;

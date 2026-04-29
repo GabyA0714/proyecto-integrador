@@ -1,6 +1,8 @@
-const prisma = require("../config/prisma");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
 
 const validarEmail = (email) => {
   const regex = /\S+@\S+\.\S+/;
@@ -11,9 +13,9 @@ const validarPassword = (password) => {
   return password.length >= 6;
 };
 
-const register = async (req, res) => {
+export const register = async (req, res) => {
   try {
-    const { nombre, apellido, email, password } = req.body;
+    const { nombre, apellido, email, password, documento } = req.body;
 
     if (!nombre || !apellido || !email || !password) {
       return res.status(400).json({ mensaje: "Todos los campos son obligatorios" });
@@ -29,44 +31,47 @@ const register = async (req, res) => {
       });
     }
 
-    const usuarioExistente = await prisma.usuario.findUnique({
+    // Buscamos si la persona ya existe en la tabla maestra 'people'
+    const personaExistente = await prisma.people.findUnique({
       where: { email }
     });
 
-    if (usuarioExistente) {
-      return res.status(400).json({ mensaje: "El usuario ya existe" });
+    if (personaExistente) {
+      return res.status(400).json({ mensaje: "El email ya está registrado" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const nuevoUsuario = await prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.create({
-        data: {
-          nombre,
-          apellido,
-          email,
-          password: passwordHash,
-          rol: "PACIENTE"
+    // Creamos la Persona, el Usuario y el Paciente todo junto
+    const nuevaPersona = await prisma.people.create({
+      data: {
+        name: `${nombre} ${apellido}`,
+        email: email,
+        documentType: "DNI",
+        document: documento || "00000000", // Valor por defecto si no lo envían
+        phone: "",
+        user: {
+          create: {
+            passwordHash: passwordHash,
+            role: "PATIENT"
+          }
+        },
+        patient: {
+          create: {
+            cuilCuit: ""
+          }
         }
-      });
-
-      await tx.paciente.create({
-        data: {
-          usuarioId: usuario.id,
-          telefono: ""
-        }
-      });
-
-      return usuario;
+      },
+      include: { user: true }
     });
 
     res.status(201).json({
       mensaje: "Paciente registrado correctamente",
       usuario: {
-        id: nuevoUsuario.id,
-        nombre: nuevoUsuario.nombre,
-        email: nuevoUsuario.email,
-        rol: nuevoUsuario.rol
+        id: nuevaPersona.user.id,
+        nombre: nuevaPersona.name,
+        email: nuevaPersona.email,
+        rol: nuevaPersona.user.role
       }
     });
 
@@ -76,7 +81,7 @@ const register = async (req, res) => {
   }
 };
 
-const login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -84,15 +89,17 @@ const login = async (req, res) => {
       return res.status(400).json({ mensaje: "Email y contraseña obligatorios" });
     }
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { email }
+    // Buscamos a la persona y traemos sus datos de usuario
+    const persona = await prisma.people.findUnique({
+      where: { email },
+      include: { user: true }
     });
 
-    if (!usuario) {
+    if (!persona || !persona.user) {
       return res.status(401).json({ mensaje: "Credenciales inválidas" });
     }
 
-    const passwordValida = await bcrypt.compare(password, usuario.password);
+    const passwordValida = await bcrypt.compare(password, persona.user.passwordHash);
 
     if (!passwordValida) {
       return res.status(401).json({ mensaje: "Credenciales inválidas" });
@@ -100,9 +107,9 @@ const login = async (req, res) => {
 
     const token = jwt.sign(
       {
-        id: usuario.id,
-        rol: usuario.rol,
-        email: usuario.email
+        id: persona.user.id,
+        rol: persona.user.role,
+        email: persona.email
       },
       process.env.JWT_SECRET,
       {
@@ -115,11 +122,10 @@ const login = async (req, res) => {
       mensaje: "Login exitoso",
       token,
       usuario: {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        apellido: usuario.apellido,
-        email: usuario.email,
-        rol: usuario.rol
+        id: persona.user.id,
+        nombre: persona.name,
+        email: persona.email,
+        rol: persona.user.role
       }
     });
 
@@ -129,33 +135,26 @@ const login = async (req, res) => {
   }
 };
 
-const perfil = async (req, res) => {
+export const perfil = async (req, res) => {
   try {
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: req.usuario.id },
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        rol: true
-      }
+    const persona = await prisma.people.findFirst({
+      where: { user: { id: req.usuario.id } },
+      include: { user: true }
     });
 
-    if (!usuario) {
+    if (!persona) {
       return res.status(404).json({ mensaje: "Usuario no encontrado" });
     }
 
-    res.json(usuario);
+    res.json({
+      id: persona.user.id,
+      nombre: persona.name,
+      email: persona.email,
+      rol: persona.user.role
+    });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ mensaje: "Error al obtener perfil" });
   }
-};
-
-module.exports = {
-  register,
-  login,
-  perfil
 };

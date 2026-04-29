@@ -1,5 +1,18 @@
-node_modules
-# Keep environment variables out of version control
+# Dependencias
+node_modules/
+
+# Variables de entorno (¡JWT_SECRET y la URL de la base de datos!)
 .env
 
+# Archivos de logs de Node
+npm-debug.log
+yarn-error.log
+
+# Archivos de Prisma generados
 /src/generated/prisma
+/prisma/data.db
+/prisma/data.db-journal
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
