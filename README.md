@@ -64,11 +64,11 @@ CREATE DATABASE espacio_senda;
 ### 3. Configurar el Backend
 
 ```bash
-cd backend
+cd estetica-backend
 npm install
 ```
 
-Creá el archivo `.env` dentro de la carpeta `backend/`:
+Creá el archivo `.env` dentro de la carpeta `estetica-backend/`:
 
 ```env
 DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
@@ -90,7 +90,7 @@ npm start
 ### 4. Configurar el Frontend
 
 ```bash
-cd ../frontend
+cd ../estetica-frontend
 npm install
 npm start
 ```
