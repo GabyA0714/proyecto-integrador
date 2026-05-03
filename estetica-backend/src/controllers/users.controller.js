@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
+import prisma from '../config/prisma.js';
 
 export const obtenerUsuarios = async (req, res) => {
   try {
@@ -100,7 +98,11 @@ export const actualizarUsuario = async (req, res) => {
     const { nombre, email, password, rol, active } = req.body;
 
     // Primero actualizamos los datos propios del Usuario (rol, password, status)
-    let userData = { role: rol, active: active };
+    let userData = { 
+      ...(rol !== undefined && { role: rol }),
+      ...(active !== undefined && { active }), 
+    };
+    
     if (password) {
       userData.passwordHash = await bcrypt.hash(password, 10);
     }
@@ -139,6 +141,39 @@ export const eliminarUsuario = async (req, res) => {
     });
 
     res.json({ mensaje: "Usuario eliminado del sistema" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const cambiarPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { passwordActual, passwordNueva } = req.body;
+
+    // Solo podés cambiar tu propia contraseña, salvo que seas ADMIN
+    if (req.usuario.rol !== 'ADMIN' && req.usuario.id !== id) {
+      return res.status(403).json({ mensaje: 'Solo podés cambiar tu propia contraseña' });
+    }
+
+    if (!passwordActual || !passwordNueva) {
+      return res.status(400).json({ mensaje: 'passwordActual y passwordNueva son obligatorios' });
+    }
+
+    const usuario = await prisma.user.findUnique({ where: { id } });
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    const valida = await bcrypt.compare(passwordActual, usuario.passwordHash);
+    if (!valida) {
+      return res.status(401).json({ mensaje: 'La contraseña actual es incorrecta' });
+    }
+
+    const passwordHash = await bcrypt.hash(passwordNueva, 10);
+    await prisma.user.update({ where: { id }, data: { passwordHash } });
+
+    res.json({ mensaje: 'Contraseña actualizada correctamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

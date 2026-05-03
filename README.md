@@ -18,6 +18,8 @@ Sistema de gestión de turnos para un centro de salud, desarrollado como Proyect
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   ├── seed.js
+│   │   ├── seed2.js
+│   │   ├── reset-all.js
 │   │   └── migrations/
 │   ├── src/
 │   │   ├── controllers/
@@ -72,6 +74,7 @@ Creá el archivo `.env` dentro de la carpeta `estetica-backend/`:
 
 ```env
 DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
+JWT_SECRET="tu_clave_secreta_aqui"
 PORT=3000
 ```
 
@@ -81,10 +84,29 @@ Ejecutá las migraciones para crear las tablas:
 npx prisma migrate dev --name init
 ```
 
+Poblá la base de datos con los datos iniciales:
+
+```bash
+node prisma/seed.js
+node prisma/seed2.js
+```
+
+Para limpiar toda la base de datos:
+
+```bash
+node prisma/reset-all.js
+```
+
 Iniciá el servidor:
 
 ```bash
 npm start
+```
+
+Tambien podes iniciar el servidor en modo desarrollo:
+
+```bash
+npm run dev
 ```
 
 ### 4. Configurar el Frontend

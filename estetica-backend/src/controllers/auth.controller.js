@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/prisma.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
+
 
 const validarEmail = (email) => {
   const regex = /\S+@\S+\.\S+/;
@@ -109,7 +109,8 @@ export const login = async (req, res) => {
       {
         id: persona.user.id,
         rol: persona.user.role,
-        email: persona.email
+        email: persona.email,
+        peopleId: persona.id
       },
       process.env.JWT_SECRET,
       {
