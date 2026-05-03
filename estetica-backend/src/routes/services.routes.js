@@ -12,7 +12,7 @@ import {
   actualizarProfessionalService,
 } from "../controllers/services.controller.js";
 import verificarToken from "../middleware/verificarToken.js";
-import authorize from "../middleware/authorize.js";
+import authorize from "../middleware/autorizarRoles.js";
 
 const router = express.Router();
 

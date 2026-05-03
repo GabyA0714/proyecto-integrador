@@ -1,52 +1,138 @@
-# Proyecto Integrador
+# Espacio Senda — Sistema de Gestión de Turnos
 
-Este proyecto corresponde al desarrollo de un sistema como parte del Proyecto Integrador de 3er año terciario.
+Sistema de gestión de turnos para un centro de salud, desarrollado como Proyecto Integrador de 3er año.
 
 ## Tecnologías utilizadas
 
-- Frontend: React / HTML / CSS / JavaScript  
-- Backend: Node.js / Express  
-- Base de datos: MySQL / SQL Server / Firebase  
-- Control de versiones: Git & GitHub  
+- **Frontend:** React + Tailwind CSS
+- **Backend:** Node.js + Express
+- **Base de datos:** PostgreSQL
+- **ORM:** Prisma
+- **Control de versiones:** Git & GitHub
 
-##  Estructura del proyecto
-/frontend
-/backend
-/database
-/docs
+  
+## Estructura del proyecto
+```
+/
+├── estetica-backend/
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   ├── seed.js
+│   │   ├── seed2.js
+│   │   ├── reset-all.js
+│   │   └── migrations/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   ├── config/
+│   │   └── utils/
+│   └── app.js
+│
+└── estetica-frontend/
+    ├── src/
+    │   ├── pages/
+    │   ├── components/
+    │   ├── hooks/
+    │   └── api/
+    └── index.html
+```
+
+## Requisitos previos
+
+Antes de instalar el proyecto, asegurate de tener instalado:
+
+- [Node.js](https://nodejs.org/) (v18 o superior)
+- [PostgreSQL](https://www.postgresql.org/download/) (v15 o superior)
+- [Git](https://git-scm.com/)
 
 ## Instalación
 
-Clonar el repositorio:
+### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/GabyA0714/proyecto-integrador.git
+cd proyecto-integrador
+```
 
-Backend
-cd backend
+### 2. Configurar la base de datos
+
+Abrí pgAdmin o psql y creá la base de datos:
+
+```sql
+CREATE DATABASE espacio_senda;
+```
+
+### 3. Configurar el Backend
+
+```bash
+cd estetica-backend
 npm install
-npm start
+```
 
-Frontend
-cd frontend
-npm install
-npm start
+Creá el archivo `.env` dentro de la carpeta `estetica-backend/`:
 
-Configuración
-
-Crear archivo .env en el backend:
-
+```env
+DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
+JWT_SECRET="tu_clave_secreta_aqui"
 PORT=3000
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=*****
+```
 
-Funcionalidades
-Registro e inicio de sesión
-Gestión de datos
-ABM (altas, bajas, modificaciones)
-Validaciones frontend/backend
+Ejecutá las migraciones para crear las tablas:
 
- Notas
+```bash
+npx prisma migrate dev --name init
+```
+
+Poblá la base de datos con los datos iniciales:
+
+```bash
+node prisma/seed.js
+node prisma/seed2.js
+```
+
+Para limpiar toda la base de datos:
+
+```bash
+node prisma/reset-all.js
+```
+
+Iniciá el servidor:
+
+```bash
+npm start
+```
+
+Tambien podes iniciar el servidor en modo desarrollo:
+
+```bash
+npm run dev
+```
+
+### 4. Configurar el Frontend
+
+```bash
+cd ../estetica-frontend
+npm install
+npm start
+```
+
+## Uso
+
+Una vez iniciados ambos servidores:
+
+- **Frontend:** http://localhost:5173
+- **Backend:** http://localhost:3000
+
+## Funcionalidades
+
+- Autenticación con roles (Administrador, Recepcionista, Profesional)
+- Gestión de profesionales, pacientes y servicios
+- Reserva y gestión de turnos
+- Registro de pagos y señas
+- Recordatorios automáticos
+- Sincronización con Google Calendar
+
+## Notas
 
 Proyecto académico con fines educativos.

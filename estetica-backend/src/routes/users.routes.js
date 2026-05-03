@@ -6,8 +6,9 @@ import {
   obtenerUsuarioPorId,
   crearUsuario,
   actualizarUsuario,
-  eliminarUsuario
-} from '../controllers/usuario.controller.js';
+  eliminarUsuario,
+  cambiarPassword
+} from '../controllers/users.controller.js';
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const router = express.Router();
 router.get(
   "/",
   verificarToken,
-  autorizarRoles("ADMIN"), // Asumiendo que autorizarRoles exporta una función que recibe un rol
+  autorizarRoles(["ADMIN"]), // Permitir que solo ADMIN vea la lista completa de usuarios
   obtenerUsuarios
 );
 
@@ -23,7 +24,7 @@ router.get(
 router.get(
   "/:id",
   verificarToken,
-  autorizarRoles("ADMIN"),
+  autorizarRoles(["ADMIN"]), // Permitir que solo ADMIN vea detalles de cualquier usuario
   obtenerUsuarioPorId
 );
 
@@ -37,7 +38,7 @@ router.post(
 router.put(
   "/:id",
   verificarToken,
-  autorizarRoles("ADMIN"),
+  autorizarRoles(["ADMIN"]), // Permitir que solo ADMIN actualice cualquier usuario
   actualizarUsuario
 );
 
@@ -45,8 +46,14 @@ router.put(
 router.delete(
   "/:id",
   verificarToken,
-  autorizarRoles("ADMIN"),
+  autorizarRoles(["ADMIN"]), // Permitir que solo ADMIN elimine usuarios
   eliminarUsuario
+);
+
+router.patch(
+  "/:id/password",
+  verificarToken,
+  cambiarPassword
 );
 
 export default router;
