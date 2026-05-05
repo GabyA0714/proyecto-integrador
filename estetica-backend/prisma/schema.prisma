@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // --- ENUMS ---
@@ -147,9 +148,9 @@ model Patient {
 }
 
 model ServiceCategory {
-  id           String    @id @default(uuid()) @db.Uuid
-  name         String    @unique
-  displayOrder Int       @map("display_order")
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique
+  displayOrder Int      @map("display_order")
 
   services     Service[]
 

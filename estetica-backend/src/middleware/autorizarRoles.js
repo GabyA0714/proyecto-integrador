@@ -1,9 +1,10 @@
 const autorizarRoles = (rolesPermitidos) => {
   return (req, res, next) => {
     try {
-      const { rol } = req.usuario;
+      // Extraemos "role" desde "req.user"
+      const { role } = req.user;
 
-      if (!rolesPermitidos.includes(rol)) {
+      if (!rolesPermitidos.includes(role)) {
         return res.status(403).json({
           error: 'Acceso denegado: no tenés permisos para esta acción'
         });

@@ -5,11 +5,10 @@ export const obtenerUsuarios = async (req, res) => {
   try {
     const usuarios = await prisma.user.findMany({
       include: {
-        person: true // Para poder ver el nombre y el email
+        person: true
       }
     });
 
-    // Mapeamos para devolver un objeto más limpio al frontend
     const usuariosLimpios = usuarios.map(u => ({
       id: u.id,
       nombre: u.person.name,
@@ -51,7 +50,6 @@ export const obtenerUsuarioPorId = async (req, res) => {
 
 export const crearUsuario = async (req, res) => {
   try {
-    // Como los datos están separados, creamos a la Persona y al Usuario juntos
     const { nombre, email, document, documentType, phone, password, rol } = req.body;
 
     const existente = await prisma.people.findUnique({
@@ -97,7 +95,6 @@ export const actualizarUsuario = async (req, res) => {
     const { id } = req.params;
     const { nombre, email, password, rol, active } = req.body;
 
-    // Primero actualizamos los datos propios del Usuario (rol, password, status)
     let userData = { 
       ...(rol !== undefined && { role: rol }),
       ...(active !== undefined && { active }), 
@@ -113,7 +110,6 @@ export const actualizarUsuario = async (req, res) => {
       include: { person: true }
     });
 
-    // Luego actualizamos los datos de la Persona asociada (nombre, email)
     if (nombre || email) {
       await prisma.people.update({
         where: { id: usuarioActualizado.peopleId },
@@ -134,8 +130,6 @@ export const eliminarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Al eliminar el usuario, la persona queda. Si querés borrar todo, 
-    // tenés que borrar la entrada en 'people'
     await prisma.user.delete({
       where: { id: String(id) }
     });
@@ -151,8 +145,8 @@ export const cambiarPassword = async (req, res) => {
     const { id } = req.params;
     const { passwordActual, passwordNueva } = req.body;
 
-    // Solo podés cambiar tu propia contraseña, salvo que seas ADMIN
-    if (req.usuario.rol !== 'ADMIN' && req.usuario.id !== id) {
+    // TODO EN INGLÉS: req.user.role y req.user.id
+    if (req.user.role !== 'ADMIN' && req.user.id !== id) {
       return res.status(403).json({ mensaje: 'Solo podés cambiar tu propia contraseña' });
     }
 

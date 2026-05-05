@@ -8,11 +8,28 @@ import servicesRoutes from './src/routes/services.routes.js';
 import appointmentsRoutes from './src/routes/appointments.routes.js';
 import reportsRoutes from './src/routes/reports.routes.js';
 
-
 const app = express();
 
+// --- CONFIGURACIÓN DE CORS (El patovica) ---
+const dominiosPermitidos = [
+  'http://localhost:5173', // Para cuando prueben el frontend con Vite
+  'http://localhost:3000', // Por si alguno usa Create React App
+  // Acá vamos a agregar la URL de Vercel cuando subamos el frontend
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitimos peticiones sin origen (como Postman) o las que estén en nuestra lista
+    if (!origin || dominiosPermitidos.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por CORS'));
+    }
+  },
+  credentials: true // Importante para que pasen los Tokens de autorización
+}));
+
 // --- MIDDLEWARES GLOBALES ---
-app.use(cors());
 app.use(express.json());
 
 // --- RUTAS ---
@@ -42,9 +59,8 @@ app.use((err, req, res, next) => {
 });
 
 // --- SERVIDOR ---
-
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
