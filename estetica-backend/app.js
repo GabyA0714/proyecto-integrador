@@ -7,6 +7,7 @@ import professionalsRoutes from './src/routes/professionals.routes.js';
 import servicesRoutes from './src/routes/services.routes.js';
 import appointmentsRoutes from './src/routes/appointments.routes.js';
 import reportsRoutes from './src/routes/reports.routes.js';
+import paymentsRoutes from './src/routes/payments.routes.js';
 
 const app = express();
 
@@ -39,7 +40,7 @@ app.use('/api/professionals', professionalsRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/reports', reportsRoutes);
-
+app.use('/api/payments', paymentsRoutes);
 // --- TEST ---
 app.get('/', (req, res) => {
   res.send('API de Espacio Senda funcionando correctamente');
