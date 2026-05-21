@@ -82,6 +82,7 @@ Creá el archivo `.env` dentro de la carpeta `estetica-backend/`:
 
 ```env
 DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
+DIRECT_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
 JWT_SECRET="tu_clave_secreta_aqui"
 PORT=3000
 ```
