@@ -4,9 +4,10 @@ const API = `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/serv
 
 // SERVICIOS
 
-export const obtenerServicios = async (token) => {
+export const obtenerServicios = async (token, active) => {
   const res = await axios.get(API, {
     headers: { Authorization: `Bearer ${token}` },
+    params: active !== undefined ? { active } : undefined,
   });
   return res.data;
 };
@@ -61,3 +62,20 @@ export const actualizarCategoria = async (id, data, token) => {
   });
   return res.data;
 };
+
+// PROFESSIONAL SERVICES
+
+export const crearProfessionalService = async (data, token) => {
+  const res = await axios.post(`${API}/professional-services`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const actualizarProfessionalService = async (id, data, token) => {
+  const res = await axios.patch(`${API}/professional-services/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
