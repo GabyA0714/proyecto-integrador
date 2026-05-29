@@ -2,9 +2,10 @@ import axios from "axios";
 
 const API = `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/patients`;
 
-export const obtenerPacientes = async (token) => {
+export const obtenerPacientes = async (token, search = "") => {
   const res = await axios.get(API, {
     headers: { Authorization: `Bearer ${token}` },
+    params: search ? { search } : undefined,
   });
   return res.data;
 };
