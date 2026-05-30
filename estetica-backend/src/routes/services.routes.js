@@ -13,7 +13,7 @@ import {
   obtenerServiciosPorProfesional,
 } from "../controllers/services.controller.js";
 import verificarToken from "../middleware/verificarToken.js";
-import authorize from "../middleware/autorizarRoles.js";
+import autorizarRoles from "../middleware/autorizarRoles.js";
 
 const router = express.Router();
 
@@ -21,19 +21,19 @@ const router = express.Router();
 router.get(
   "/categories",
   verificarToken,
-  authorize(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
   obtenerCategorias,
 );
 router.post(
   "/categories",
   verificarToken,
-  authorize(["ADMIN"]),
+  autorizarRoles(["ADMIN"]),
   crearCategoria,
 );
 router.patch(
   "/categories/:id",
   verificarToken,
-  authorize(["ADMIN"]),
+  autorizarRoles(["ADMIN"]),
   actualizarCategoria,
 );
 
@@ -42,20 +42,20 @@ router.patch(
 router.get(
   "/professional-services/by-professional/:professionalId",
   verificarToken,
-  authorize(["ADMIN", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "PROFESSIONAL"]),
   obtenerServiciosPorProfesional,
 );
 
 router.post(
   "/professional-services",
   verificarToken,
-  authorize(["ADMIN", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "PROFESSIONAL"]),
   crearProfessionalService,
 );
 router.patch(
   "/professional-services/:id",
   verificarToken,
-  authorize(["ADMIN", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "PROFESSIONAL"]),
   actualizarProfessionalService,
 );
 
@@ -63,24 +63,31 @@ router.patch(
 router.get(
   "/",
   verificarToken,
-  authorize(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
   obtenerServicios,
 );
 router.get(
   "/:id",
   verificarToken,
-  authorize(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
   obtenerServicioPorId,
 );
-router.post("/", verificarToken, authorize(["ADMIN"]), crearServicio);
-router.patch("/:id", verificarToken, authorize(["ADMIN"]), actualizarServicio);
+router.post("/", 
+  verificarToken, 
+  autorizarRoles(["ADMIN"]), 
+  crearServicio);
+  
+router.patch(
+  "/:id",
+  verificarToken,
+  autorizarRoles(["ADMIN"]),
+  actualizarServicio,
+);
 router.patch(
   "/:id/deactivate",
   verificarToken,
-  authorize(["ADMIN"]),
+  autorizarRoles(["ADMIN"]),
   desactivarServicio,
 );
-
-
 
 export default router;
