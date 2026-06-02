@@ -19,6 +19,8 @@ import AperturaAgenda from "./pages/admin/AperturaAgenda";
 import CalendarioSemanal from "./pages/admin/CalendarioSemanal";
 import PacientesAdmin from "./pages/admin/PacientesAdmin";
 import FichaPacienteAdmin from "./pages/admin/FichaPacienteAdmin";
+import CategoriaServiciosAdmin from "./pages/admin/CategoriaServiciosAdmin";
+import ProfessionalServicesAdmin from "./pages/admin/ProfessionalServicesAdmin";
 
 // Páginas de Paciente
 //mport PacienteDashboard from "./pages/paciente/Dashboard";
@@ -54,6 +56,8 @@ function App() {
           <Route path="mi-perfil" element={<CambiarPassword />} />
           <Route path="pacientes" element={<PacientesAdmin />} />
           <Route path="pacientes/:id" element={<FichaPacienteAdmin />} />
+          <Route path="categorias" element={<CategoriaServiciosAdmin />} />
+          <Route path="servicios-profesional" element={<ProfessionalServicesAdmin />} />
         </Route>
         
       </Routes>
