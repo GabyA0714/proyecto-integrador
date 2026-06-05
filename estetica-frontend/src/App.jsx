@@ -61,8 +61,7 @@ function App() {
         </Route>
 
         {/* --- RUTAS DE PACIENTE (Comentadas temporalmente por QA) --- */}
-        {/* 
-        <Route
+        {/* <Route
           path="/paciente"
           element={
             <ProtectedRoute rolesPermitidos={["PATIENT"]}>
@@ -71,7 +70,6 @@ function App() {
           }
         /> 
         */}
-
       </Routes>
     </BrowserRouter>
   );
