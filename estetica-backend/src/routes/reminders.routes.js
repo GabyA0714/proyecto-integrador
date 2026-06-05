@@ -5,6 +5,21 @@ import { procesarRecordatorios } from '../utils/reminders.js';
 const router = Router();
 
 // POST /api/reminders/enviar → Disparar recordatorios manualmente
+/**
+ * @swagger
+ * /api/reminders/enviar:
+ *   post:
+ *     summary: Disparar recordatorios manualmente
+ *     tags:
+ *       - Recordatorios
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recordatorios procesados correctamente
+ *       500:
+ *         description: Error al procesar recordatorios
+ */
 router.post('/enviar', verificarToken, async (req, res) => {
   try {
     await procesarRecordatorios();
