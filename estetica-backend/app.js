@@ -12,6 +12,9 @@ import paymentsRoutes from './src/routes/payments.routes.js';
 import iniciarRecordatorios from './src/utils/reminders.js';
 import remindersRoutes from './src/routes/reminders.routes.js';
 
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./src/config/swagger.js";
+
 const app = express();
 
 // --- CONFIGURACIÓN DE CORS (El patovica) ---
@@ -35,6 +38,8 @@ app.use(cors({
 
 // --- MIDDLEWARES GLOBALES ---
 app.use(express.json());
+
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- RUTAS ---
 app.use('/api/auth', authRoutes);
