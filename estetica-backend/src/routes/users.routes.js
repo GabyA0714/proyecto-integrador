@@ -16,6 +16,21 @@ import {
 const router = express.Router();
 
 // SOLO ADMIN puede ver usuarios
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Obtener todos los usuarios
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuarios obtenida correctamente
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.get(
   "/",
   verificarToken,
@@ -25,6 +40,22 @@ router.get(
 
 // BUSCADOR DE PERSONAS (Pacientes/Profesionales)
 // Ojo: Si tu router principal está en "/users", esta ruta será "/users/people"
+
+/**
+ * @swagger
+ * /api/users/people:
+ *   get:
+ *     summary: Buscar personas (pacientes y profesionales)
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Personas encontradas correctamente
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.get(
   "/people",
   verificarToken,
@@ -32,6 +63,30 @@ router.get(
 );
 
 // SOLO ADMIN puede ver usuario por ID
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Obtener un usuario por ID
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuario encontrado
+ *       404:
+ *         description: Usuario no encontrado
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.get(
   "/:id",
   verificarToken,
@@ -42,6 +97,24 @@ router.get(
 // SOLO ADMIN puede crear usuarios (¡Le agregué seguridad!)
 // Antes estaba sin token, pero en un sistema de clínica no queremos 
 // que cualquier persona en internet se cree un usuario Administrador.
+
+/**
+ * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Crear un nuevo usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Usuario creado correctamente
+ *       400:
+ *         description: Datos inválidos
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.post(
   "/",
   verificarToken,
@@ -50,6 +123,30 @@ router.post(
 );
 
 // SOLO ADMIN puede actualizar (Cambiado de PUT a PATCH según el documento de tareas)
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   patch:
+ *     summary: Actualizar un usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuario actualizado correctamente
+ *       404:
+ *         description: Usuario no encontrado
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.patch(
   "/:id",
   verificarToken,
@@ -58,6 +155,30 @@ router.patch(
 );
 
 // SOLO ADMIN puede activar un usuario
+
+/**
+ * @swagger
+ * /api/users/{id}/activate:
+ *   patch:
+ *     summary: Activar un usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuario activado correctamente
+ *       404:
+ *         description: Usuario no encontrado
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.patch(
   "/:id/activate",
   verificarToken,
@@ -66,6 +187,30 @@ router.patch(
 );
 
 // SOLO ADMIN puede desactivar un usuario
+
+/**
+ * @swagger
+ * /api/users/{id}/deactivate:
+ *   patch:
+ *     summary: Desactivar un usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuario desactivado correctamente
+ *       404:
+ *         description: Usuario no encontrado
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.patch(
   "/:id/deactivate",
   verificarToken,
@@ -74,6 +219,30 @@ router.patch(
 );
 
 // SOLO ADMIN puede eliminar
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Eliminar un usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Usuario eliminado correctamente
+ *       404:
+ *         description: Usuario no encontrado
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.delete(
   "/:id",
   verificarToken,
@@ -82,6 +251,30 @@ router.delete(
 );
 
 // Cualquier usuario logueado puede cambiar SU PROPIA contraseña
+
+/**
+ * @swagger
+ * /api/users/{id}/password:
+ *   patch:
+ *     summary: Cambiar contraseña de un usuario
+ *     tags:
+ *       - Usuarios
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada correctamente
+ *       400:
+ *         description: Contraseña actual incorrecta
+ *       401:
+ *         description: Token inválido o ausente
+ */
 router.patch(
   "/:id/password",
   verificarToken,
