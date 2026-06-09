@@ -1,5 +1,5 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit'; // Importamos el limitador
+import rateLimit from 'express-rate-limit';
 import { 
   register, 
   login, 
@@ -32,7 +32,6 @@ const emailLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
 
 /**
  * @swagger
@@ -80,10 +79,8 @@ router.post('/register', register);
  * 429:
  * description: Demasiados intentos fallidos (Rate limit)
  */
-// Aplicamos la barrera de seguridad al endpoint de login
 router.post('/login', loginLimiter, login);
 
-// ¡Ruta reactivada!
 /**
  * @swagger
  * /api/auth/me:
@@ -128,7 +125,6 @@ router.get('/me', verificarToken, perfil);
  * 404:
  * description: Email no encontrado
  */
-// Aplicamos la barrera para evitar spam de correos
 router.post('/forgot-password', emailLimiter, forgotPassword);
 
 /**
