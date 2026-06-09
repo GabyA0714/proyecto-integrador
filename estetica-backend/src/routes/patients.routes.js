@@ -73,6 +73,41 @@ router.get(
  *       - Pacientes
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - documentType
+ *               - document
+ *               - email
+ *               - phone
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Valentina Romero
+ *               documentType:
+ *                 type: string
+ *                 enum: [DNI, PASSPORT, CUIL, CUIT]
+ *                 example: DNI
+ *               document:
+ *                 type: string
+ *                 example: 35456789
+ *               email:
+ *                 type: string
+ *                 example: valentina@email.com
+ *               phone:
+ *                 type: string
+ *                 example: 11-3456-7890
+ *               cuilCuit:
+ *                 type: string
+ *                 example: 27354567890
+ *               clinicalNotes:
+ *                 type: string
+ *                 example: Alergia a la lidocaína
  *     responses:
  *       201:
  *         description: Paciente creado correctamente
@@ -105,6 +140,25 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               documentType:
+ *                 type: string
+ *                 enum: [DNI, PASSPORT, CUIL, CUIT]
+ *               document:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               cuilCuit:
+ *                 type: string
+ *               clinicalNotes:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Paciente actualizado correctamente
