@@ -1,7 +1,7 @@
 import prisma from '../config/prisma.js';
 
 export const verificarProfesional = async (professionalId, usuario) => {
-  if (usuario.rol !== 'PROFESSIONAL') return true; // ADMIN y RECEPTIONIST pasan siempre
+  if (usuario.role !== 'PROFESSIONAL') return true; // ADMIN y RECEPTIONIST pasan siempre
 
   const profesional = await prisma.professional.findUnique({
     where: { id: professionalId }

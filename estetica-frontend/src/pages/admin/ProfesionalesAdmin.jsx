@@ -17,10 +17,13 @@ const ProfesionalesAdmin = () => {
   const [profesionalEditandoId, setProfesionalEditandoId] = useState(null);
   
   const [formData, setFormData] = useState({ 
-    nombre: "", 
-    especialidad: "", 
+    name: "", 
+    documentType: "", 
+    document: "", 
     email: "", 
-    telefono: "" 
+    phone: "", 
+    specialty: "", 
+    password: ""
   });
   
   const [errorForm, setErrorForm] = useState("");

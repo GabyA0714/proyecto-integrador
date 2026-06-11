@@ -121,7 +121,7 @@ const ServiciosAdmin = () => {
     try {
       const payload = {
         ...formData,
-        categoryId: Number(formData.categoryId),
+        categoryId: formData.categoryId,
         defaultDurationMinutes: Number(formData.defaultDurationMinutes),
       };
 

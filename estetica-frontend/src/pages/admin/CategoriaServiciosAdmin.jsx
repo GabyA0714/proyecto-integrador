@@ -4,167 +4,289 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  obtenerCategorias,
+  crearCategoria,
+  actualizarCategoria,
+} from "../../api/services.api";
 
-const ProfesionalesAdmin = () => {
-  const [profesionales, setProfesionales] = useState([]);
+const CategoriaServiciosAdmin = () => {
+  const [categorias, setCategorias] = useState([]);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
-  
-  const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
-  const [profesionalSeleccionado, setProfesionalSeleccionado] = useState(null);
+
+  // Modal de Formulario (Crear / Editar)
   const [modalFormAbierto, setModalFormAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
-  const [profesionalEditandoId, setProfesionalEditandoId] = useState(null);
-  
-  const [formData, setFormData] = useState({ 
-    nombre: "", 
-    especialidad: "", 
-    email: "", 
-    telefono: "" 
+  const [categoriaEditandoId, setCategoriaEditandoId] = useState(null);
+
+  // Adaptamos el formData a lo que necesita una Categoría
+  const [formData, setFormData] = useState({
+    name: "",
+    displayOrder: "",
   });
-  
+
   const [errorForm, setErrorForm] = useState("");
   const [cargandoForm, setCargandoForm] = useState(false);
 
-  const { token } = useAuth(); 
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+  const { token } = useAuth();
 
-  const obtenerProfesionales = async () => {
+  // Muestra el mensaje real del backend (ej. el 409 de nombre duplicado)
+  // en lugar del genérico "Request failed with status code 409" de axios.
+  const mensajeDeError = (err) =>
+    err.response?.data?.mensaje ||
+    err.response?.data?.error ||
+    err.message ||
+    "Ocurrió un error inesperado";
+
+  // OBTENER CATEGORÍAS
+
+  const cargarCategorias = async () => {
     try {
-      const respuesta = await fetch(`${apiUrl}/professionals`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const datos = await respuesta.json();
-      console.log("Datos recibidos:", datos);
-      if (!respuesta.ok) throw new Error(datos.error || "Error al traer profesionales");
-      setProfesionales(datos);
+      const data = await obtenerCategorias(token);
+      setCategorias(data);
     } catch (err) {
-      setError(err.message);
+      setError(mensajeDeError(err));
     } finally {
       setCargando(false);
     }
   };
 
   useEffect(() => {
-    obtenerProfesionales();
-  }, []);
+    if (token) {
+      cargarCategorias();
+    }
+  }, [token]);
+
+  // MODAL CREAR
 
   const abrirModalCrear = () => {
     setModoEdicion(false);
-    setProfesionalEditandoId(null);
-    setFormData({ nombre: "", especialidad: "", email: "", telefono: "" });
-    setModalFormAbierto(true);
-  };
 
-  const abrirModalEditar = (p) => {
-    setModoEdicion(true);
-    setProfesionalEditandoId(p.id);
-    setFormData({ 
-      nombre: p.nombre || p.name || p.person?.name || p.user?.person?.name || "", 
-      especialidad: p.especialidad || p.specialty || "", 
-      email: p.email || p.person?.email || p.user?.person?.email || "", 
-      telefono: p.telefono || p.phone || p.person?.phone || "" 
+    setCategoriaEditandoId(null);
+
+    // Sugerimos el siguiente orden libre (el más alto + 1)
+    const siguienteOrden =
+      categorias.reduce((max, c) => Math.max(max, c.displayOrder || 0), 0) + 1;
+
+    setFormData({
+      name: "",
+      displayOrder: String(siguienteOrden),
     });
+
+    setErrorForm("");
     setModalFormAbierto(true);
   };
 
-  const manejarGuardado = async (e) => {
-    e.preventDefault();
+  // MODAL EDITAR
+
+  const abrirModalEditar = (categoria) => {
+    setModoEdicion(true);
+
+    setCategoriaEditandoId(categoria.id);
+    setFormData({
+      name: categoria.name || "",
+      displayOrder: String(categoria.displayOrder ?? ""),
+    });
+
     setErrorForm("");
+    setModalFormAbierto(true);
+  };
+
+  // GUARDAR
+
+  const guardarCategoria = async (e) => {
+    e.preventDefault();
+
+    setErrorForm("");
+
+    // Validaciones del lado del cliente
+    if (!formData.name.trim()) {
+      setErrorForm("El nombre es obligatorio");
+      return;
+    }
+
+    const ordenNum = Number(formData.displayOrder);
+    if (formData.displayOrder === "" || isNaN(ordenNum)) {
+      setErrorForm("El orden debe ser un número");
+      return;
+    }
+
+    // Evitamos que dos categorías queden con el mismo orden.
+    // (En edición, ignoramos la categoría que estamos editando.)
+    const ordenRepetido = categorias.some(
+      (c) => c.displayOrder === ordenNum && c.id !== categoriaEditandoId
+    );
+    if (ordenRepetido) {
+      setErrorForm(
+        `El orden ${ordenNum} ya está usado por otra categoría. Elegí otro número.`
+      );
+      return;
+    }
+
     setCargandoForm(true);
+
     try {
-      const url = modoEdicion ? `${apiUrl}/professionals/${profesionalEditandoId}` : `${apiUrl}/professionals`;
-      const method = modoEdicion ? "PATCH" : "POST";
-      const respuesta = await fetch(url, {
-        method: method,
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
-        },
-        body: JSON.stringify(formData),
-      });
-      const datos = await respuesta.json();
-      if (!respuesta.ok) throw new Error(datos.mensaje || datos.error || "Error al guardar.");
+      const payload = {
+        name: formData.name.trim(),
+        displayOrder: ordenNum,
+      };
+
+      if (modoEdicion) {
+        await actualizarCategoria(categoriaEditandoId, payload, token);
+      } else {
+        await crearCategoria(payload, token);
+      }
       setModalFormAbierto(false);
-      obtenerProfesionales(); 
+
+      cargarCategorias();
     } catch (err) {
-      setErrorForm(err.message);
+      setErrorForm(mensajeDeError(err));
     } finally {
       setCargandoForm(false);
     }
   };
 
-  const ejecutarEliminacion = async () => {
-    try {
-      const respuesta = await fetch(`${apiUrl}/professionals/${profesionalSeleccionado.id}`, {
-        method: 'DELETE',
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!respuesta.ok) throw new Error("No se pudo eliminar");
-      setModalEliminarAbierto(false);
-      obtenerProfesionales();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  if (cargando) return <p style={{ textAlign: 'center', marginTop: '50px' }}>Cargando profesionales...</p>;
+  if (cargando) {
+    return (
+      <p style={{ textAlign: "center", marginTop: "50px" }}>
+        Cargando categorías...
+      </p>
+    );
+  }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: '#6b21a8' }}>Gestión de Profesionales</h2>
-        <Button onClick={abrirModalCrear}>+ Nuevo Profesional</Button>
+    <div style={{ padding: "20px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <h2 style={{ color: "#6b21a8" }}>Gestión de Categorías</h2>
+
+        <Button onClick={abrirModalCrear}>+ Nueva Categoría</Button>
       </div>
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <Table headers={["Nombre", "Especialidad", "Contacto", "Acciones"]}>
-        {profesionales.map((p) => {
-          const nombre = p.nombre || p.name || p.person?.name || p.user?.person?.name || "Sin nombre";
-          const email = p.email || p.person?.email || p.user?.person?.email || "Sin email";
-          const especialidad = p.especialidad || p.specialty || "General";
-          const tel = p.telefono || p.phone || p.person?.phone || "-";
+      <Table headers={["Orden", "Categoría", "Servicios activos", "Acciones"]}>
+        {categorias.map((c) => (
+          <Tr key={c.id}>
+            <Td>{c.displayOrder}</Td>
 
-          return (
-            <Tr key={p.id}>
-              <Td><strong>{nombre}</strong></Td>
-              <Td>{especialidad}</Td>
-              <Td>
-                <div style={{ display: 'flex', flexDirection: 'column', fontSize: '13px' }}>
-                  <span>{email}</span>
-                  <span style={{ color: '#64748b' }}>{tel}</span>
-                </div>
-              </Td>
-              <Td>
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                  <Button style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#64748b' }} onClick={() => abrirModalEditar(p)}>Editar</Button>
-                  <Button variant="danger" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => { setProfesionalSeleccionado(p); setModalEliminarAbierto(true); }}>Eliminar</Button>
-                </div>
-              </Td>
-            </Tr>
-          );
-        })}
+            <Td>
+              <strong>{c.name}</strong>
+            </Td>
+
+            <Td>{c.services?.length ?? 0}</Td>
+
+            <Td>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  justifyContent: "center",
+                }}
+              >
+                <Button
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    backgroundColor: "#64748b",
+                  }}
+                  onClick={() => abrirModalEditar(c)}
+                >
+                  Editar
+                </Button>
+              </div>
+            </Td>
+          </Tr>
+        ))}
       </Table>
 
-      <Modal isOpen={modalFormAbierto} onClose={() => setModalFormAbierto(false)} title={modoEdicion ? "Editar Profesional" : "Crear Nuevo Profesional"}>
-        <form autoComplete="off" onSubmit={manejarGuardado} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <Input type="text" placeholder="Nombre completo" autoComplete="off" value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} required />
-          <Input type="text" placeholder="Especialidad" autoComplete="off" value={formData.especialidad} onChange={(e) => setFormData({...formData, especialidad: e.target.value})} required />
-          <Input type="email" placeholder="Email" autoComplete="new-email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required />
-          <Input type="text" placeholder="Teléfono" autoComplete="off" value={formData.telefono} onChange={(e) => setFormData({...formData, telefono: e.target.value})} />
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button type="submit">{cargandoForm ? "Guardando..." : "Guardar"}</Button>
+      {/* MODAL FORMULARIO */}
+
+      <Modal
+        isOpen={modalFormAbierto}
+        onClose={() => setModalFormAbierto(false)}
+        title={modoEdicion ? "Editar Categoría" : "Crear Nueva Categoría"}
+      >
+        {errorForm && (
+          <p
+            style={{
+              color: "red",
+              fontSize: "14px",
+              textAlign: "center",
+            }}
+          >
+            {errorForm}
+          </p>
+        )}
+
+        <form
+          onSubmit={guardarCategoria}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            marginTop: "10px",
+          }}
+        >
+          <Input
+            type="text"
+            placeholder="Nombre de la categoría"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                name: e.target.value,
+              })
+            }
+            required
+          />
+
+          <Input
+            type="number"
+            placeholder="Orden de visualización (ej: 1, 2, 3...)"
+            value={formData.displayOrder}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                displayOrder: e.target.value,
+              })
+            }
+            required
+          />
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "10px",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Button
+              type="button"
+              style={{
+                backgroundColor: "#e2e8f0",
+                color: "#475569",
+              }}
+              onClick={() => setModalFormAbierto(false)}
+            >
+              Cancelar
+            </Button>
+
+            <Button type="submit" disabled={cargandoForm}>
+              {cargandoForm ? "Guardando..." : "Guardar Categoría"}
+            </Button>
           </div>
         </form>
-      </Modal>
-
-      <Modal isOpen={modalEliminarAbierto} onClose={() => setModalEliminarAbierto(false)} title="Confirmar">
-        <p>¿Eliminar a {profesionalSeleccionado?.nombre || profesionalSeleccionado?.person?.name}?</p>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <Button variant="danger" onClick={ejecutarEliminacion}>Sí, eliminar</Button>
-        </div>
       </Modal>
     </div>
   );
 };
 
-export default ProfesionalesAdmin;
+export default CategoriaServiciosAdmin;

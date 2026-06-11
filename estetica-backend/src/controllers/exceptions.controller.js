@@ -48,7 +48,7 @@ export const crearBloqueo = async (req, res) => {
       return res.status(404).json({ mensaje: 'Profesional no encontrado' });
     }
 
-    if (!await verificarProfesional(id, req.usuario)) {
+    if (!await verificarProfesional(id, req.user)) {
       return res.status(403).json({ mensaje: 'Solo podés gestionar tu propia agenda' });
     }
 
