@@ -208,13 +208,13 @@ export const actualizarProfesional = async (req, res) => {
       });
     }
 
-    if (!await verificarProfesional(id, req.usuario)) {
+    if (!await verificarProfesional(id, req.user)) {
       return res.status(403).json({
         mensaje: 'Solo podés editar tu propio perfil'
       });
     }
 
-    if (req.usuario.rol === 'PROFESSIONAL' && active !== undefined) {
+    if (req.user.rol === 'PROFESSIONAL' && active !== undefined) {
       return res.status(403).json({
         mensaje: 'No tenés permisos para activar o desactivar un profesional'
       });
