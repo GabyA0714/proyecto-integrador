@@ -181,7 +181,7 @@ Una guía rápida de qué comando usar en cada situación (todos desde `estetica
 | Situación | Comando |
 |---|---|
 | Cambiaste el `schema.prisma` (agregaste un campo o tabla) | `npx prisma migrate dev --name descripcion_del_cambio` |
-| Hiciste `git pull` y un compañero subió migraciones nuevas (agrego un campo o tabla) y la base quedo desincronizada | `npx prisma migrate dev` |
+| Hiciste `git pull` y un compañero subió migraciones nuevas (agrego un campo o tabla) y la base quedo desincronizada | `npx prisma migrate deploy` y `npx prisma generate`|
 | Reinstalaste `node_modules` sin tocar el schema | `npx prisma generate` |
 | Querés ver/editar los datos visualmente | `npx prisma studio` |
 | Resetear los datos a cero | `node prisma/reset-data.js` |
