@@ -13,7 +13,10 @@ import {
 const FichaPacienteAdmin = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  // El historial de pagos es info financiera: solo Admin/Recepción. El
+  // profesional ve la ficha y los turnos, pero no los pagos.
+  const puedeVerPagos = ["ADMIN", "RECEPTIONIST"].includes(user?.role);
 
   const [paciente, setPaciente] = useState(null);
   const [turnos, setTurnos] = useState([]);
@@ -23,14 +26,22 @@ const FichaPacienteAdmin = () => {
 
   const cargarDatos = async () => {
     try {
-      const [dataPaciente, dataTurnos, dataPagos] = await Promise.all([
+      const [dataPaciente, dataTurnos] = await Promise.all([
         obtenerPacientePorId(id, token),
         obtenerHistorialTurnos(id, token),
-        obtenerHistorialPagos(id, token),
       ]);
       setPaciente(dataPaciente);
       setTurnos(dataTurnos);
-      setPagos(dataPagos);
+
+      // Los pagos se piden aparte y solo si el rol puede verlos, para que un
+      // 403 no tumbe la carga de la ficha completa.
+      if (puedeVerPagos) {
+        try {
+          setPagos(await obtenerHistorialPagos(id, token));
+        } catch {
+          setPagos([]);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -182,6 +193,7 @@ const FichaPacienteAdmin = () => {
         </div>
       )}
 
+      {puedeVerPagos && (<>
       {/* HISTORIAL DE PAGOS */}
 
       <h3 style={{ color: "#475569", marginBottom: "15px" }}>
@@ -225,6 +237,7 @@ const FichaPacienteAdmin = () => {
           ))}
         </Table>
       )}
+      </>)}
     </div>
   );
 };

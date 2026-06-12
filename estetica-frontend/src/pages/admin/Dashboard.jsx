@@ -116,15 +116,21 @@ const Dashboard = () => {
   const banner = useBanner();
   const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
+  // Un profesional ve su dashboard acotado a SU perfil: fijamos su id en los
+  // filtros y bloqueamos los selectores. (El backend ya scopea /appointments,
+  // esto solo alinea la UI para que no intente filtrar por otros.)
+  const esProfesional = user?.role === "PROFESSIONAL";
+  const miProfId = user?.professionalId || "";
+
   const hoy = new Date();
 
   // Filtro de KPIs
-  const [kpiProf, setKpiProf] = useState("");
+  const [kpiProf, setKpiProf] = useState(esProfesional ? miProfId : "");
   const [kpiMes, setKpiMes]   = useState(hoy.getMonth() + 1);
   const [kpiAnio, setKpiAnio] = useState(hoy.getFullYear());
 
   // Filtro de la tabla de turnos
-  const [tablaProf, setTablaProf] = useState("");
+  const [tablaProf, setTablaProf] = useState(esProfesional ? miProfId : "");
   const [tablaDia, setTablaDia]   = useState(hoyStr());
 
   const [profesionales, setProfesionales] = useState([]);
@@ -151,11 +157,17 @@ const Dashboard = () => {
   // ── Profesionales ──
   useEffect(() => {
     if (!token) return;
+    // El profesional no puede listar /professionals (ruta ADMIN/RECEPTIONIST) y
+    // tampoco lo necesita: su filtro queda fijo en su propia ficha.
+    if (esProfesional) {
+      setProfesionales(miProfId ? [{ id: miProfId, person: { name: user?.person?.name || "Mi perfil" } }] : []);
+      return;
+    }
     fetch(`${API}/professionals`, { headers: headers() })
       .then((r) => r.json())
       .then((d) => setProfesionales(Array.isArray(d) ? d : []))
       .catch(() => setProfesionales([]));
-  }, [token]);
+  }, [token, esProfesional, miProfId]);
 
   // ── KPIs del mes ──
   const cargarKpis = useCallback(async () => {
@@ -304,9 +316,9 @@ const Dashboard = () => {
       <div style={{ ...S.card, marginBottom: "20px" }}>
         <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
           <div style={{ flex: "2", minWidth: "200px" }}>
-            <label style={S.label}>Profesional</label>
-            <select style={S.select} value={kpiProf} onChange={(e) => setKpiProf(e.target.value)}>
-              <option value="">Todos</option>
+            <label style={S.label}>Profesional{esProfesional ? " (vos)" : ""}</label>
+            <select style={S.select} value={kpiProf} onChange={(e) => setKpiProf(e.target.value)} disabled={esProfesional}>
+              {!esProfesional && <option value="">Todos</option>}
               {optsProf}
             </select>
           </div>
@@ -370,9 +382,9 @@ const Dashboard = () => {
                      onChange={(e) => setTablaDia(e.target.value)} />
             </div>
             <div style={{ minWidth: "190px" }}>
-              <label style={S.label}>Profesional</label>
-              <select style={S.select} value={tablaProf} onChange={(e) => setTablaProf(e.target.value)}>
-                <option value="">Todos</option>
+              <label style={S.label}>Profesional{esProfesional ? " (vos)" : ""}</label>
+              <select style={S.select} value={tablaProf} onChange={(e) => setTablaProf(e.target.value)} disabled={esProfesional}>
+                {!esProfesional && <option value="">Todos</option>}
                 {optsProf}
               </select>
             </div>

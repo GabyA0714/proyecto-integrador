@@ -17,6 +17,11 @@ export const generarDisponibilidad = async (req, res) => {
       return res.status(404).json({ mensaje: 'Profesional no encontrado' });
     }
 
+    // Un PROFESSIONAL solo puede generar SU propia agenda (ADMIN pasa siempre).
+    if (!await verificarProfesional(id, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo podés generar tu propia agenda' });
+    }
+
     const horarios = await prisma.recurringSchedule.findMany({
       where: { professionalId: id, active: true },
     });
@@ -47,8 +52,18 @@ export const generarDisponibilidad = async (req, res) => {
         const horariosDelDia = horarios.filter((h) => h.dayOfWeek === diaSemana);
 
         for (const h of horariosDelDia) {
+          // Chequeamos existencia por (profesional, fecha, horario EXACTO).
+          // Antes se miraba solo (profesional, fecha): si un profesional tenía
+          // dos franjas el mismo día (ej. mañana y tarde), al existir la primera
+          // se salteaban las demás. Incluir start/end permite varias franjas y
+          // mantiene la idempotencia (regenerar no duplica la misma franja).
           const existe = await prisma.availability.findFirst({
-            where: { professionalId: id, date: new Date(fechaStr) },
+            where: {
+              professionalId: id,
+              date: new Date(fechaStr),
+              startTime: h.startTime,
+              endTime: h.endTime,
+            },
           });
 
           if (!existe) {
@@ -125,7 +140,18 @@ export const obtenerDisponibilidad = async (req, res) => {
     const slots = await prisma.availability.findMany({
       where,
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-      include: { appointments: { select: { id: true, status: true } } },
+      include: {
+        appointments: {
+          orderBy: { startsAt: 'asc' },
+          select: {
+            id: true,
+            status: true,
+            startsAt: true,
+            patient: { select: { person: { select: { name: true } } } },
+            professionalService: { select: { service: { select: { name: true } } } },
+          },
+        },
+      },
     });
 
     res.json(slots);

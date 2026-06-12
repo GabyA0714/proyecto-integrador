@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import { verificarProfesional, professionalIdDelUsuario, SIN_COINCIDENCIAS } from '../middleware/checkProfessional.js';
 
 const CLINIC_TZ = 'America/Argentina/Buenos_Aires';
 const toMinutes = (d) => d.getUTCHours() * 60 + d.getUTCMinutes();
@@ -268,6 +269,15 @@ export const obtenerTurnos = async (req, res) => {
 
     const where = {};
     if (professionalId) where.professionalService = { professionalId };
+
+    // Scope de seguridad: un PROFESSIONAL solo ve SUS turnos, sin importar el
+    // professionalId que venga en el query. Si no tiene ficha vinculada, no ve
+    // nada (filtro imposible) en vez de ver todo.
+    if (req.user?.role === 'PROFESSIONAL') {
+      const miId = await professionalIdDelUsuario(req.user);
+      where.professionalService = { professionalId: miId ?? SIN_COINCIDENCIAS };
+    }
+
     if (patientId) where.patientId = patientId;
     if (status) where.status = status;
     if (needsReschedule === 'true')  where.rescheduleRequestedAt = { not: null };
@@ -363,6 +373,11 @@ export const crearTurno = async (req, res) => {
       return res.status(400).json({
         mensaje: 'Todos los servicios deben ser del mismo profesional para agendarlos juntos',
       });
+    }
+
+    // Scope: un PROFESSIONAL solo puede agendar en SU propia agenda.
+    if (!await verificarProfesional(serviciosOrdenados[0].professionalId, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo podés agendar en tu propia agenda' });
     }
  
     const availability = await prisma.availability.findUnique({ where: { id: availabilityId } });
@@ -483,6 +498,11 @@ export const crearSobreturno = async (req, res) => {
       });
     }
 
+    // Scope: un PROFESSIONAL solo puede hacer sobreturnos en SU propia agenda.
+    if (!await verificarProfesional(serviciosOrdenados[0].professionalId, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo podés agendar en tu propia agenda' });
+    }
+
     const paciente = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!paciente) {
       return res.status(404).json({ mensaje: 'Paciente no encontrado' });
@@ -556,9 +576,17 @@ export const cambiarEstadoTurno = async (req, res) => {
       return res.status(400).json({ mensaje: 'status es obligatorio' });
     }
  
-    const turno = await prisma.appointment.findUnique({ where: { id } });
+    const turno = await prisma.appointment.findUnique({
+      where: { id },
+      include: { professionalService: { select: { professionalId: true } } },
+    });
     if (!turno) {
       return res.status(404).json({ mensaje: 'Turno no encontrado' });
+    }
+
+    // Un PROFESSIONAL solo puede cambiar el estado de sus propios turnos.
+    if (!await verificarProfesional(turno.professionalService.professionalId, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo podés gestionar turnos propios' });
     }
 
     // Se permite mover el turno a cualquier estado conocido (incluso revertir
@@ -610,6 +638,11 @@ export const reprogramarTurno = async (req, res) => {
       include: { professionalService: true },
     });
     if (!turno) return res.status(404).json({ mensaje: 'Turno no encontrado' });
+
+    // Un PROFESSIONAL solo puede reprogramar sus propios turnos.
+    if (!await verificarProfesional(turno.professionalService.professionalId, req.user)) {
+      return res.status(403).json({ mensaje: 'Solo podés reprogramar turnos propios' });
+    }
 
     const availability = await prisma.availability.findUnique({ where: { id: availabilityId } });
     if (!availability || !availability.active) {

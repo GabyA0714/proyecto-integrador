@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useCallback } from "react";
 import { Table, Tr, Td } from "./ui/Table";
 import { Button } from "./ui/Button";
@@ -7,6 +5,7 @@ import { Modal } from "./ui/Modal";
 import { Input } from "./ui/Input";
 import { Select } from "./ui/Select";
 import { useBanner } from "./ui/Banner";
+import { useAuth } from "../hooks/useAuth";
 import {
   obtenerServiciosDeProfesional,
   crearProfessionalService,
@@ -25,6 +24,10 @@ const esActivo = (ps) => ps.active !== false; // tolera registros viejos sin el 
 
 export const GestionServiciosProfesional = ({ professionalId, token }) => {
   const banner = useBanner();
+  const { user } = useAuth();
+  // Admin gestiona cualquier ficha; el profesional, la suya (el backend valida).
+  // Recepción solo mira: sin botones de modificar.
+  const editable = ["ADMIN", "PROFESSIONAL"].includes(user?.role);
   const [servicios, setServicios] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -181,18 +184,20 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
         }}
       >
         <h3 style={{ color: "#475569", margin: 0 }}>Servicios del profesional</h3>
-        <Button
-          onClick={abrirCrear}
-          disabled={cargando || disponiblesParaAgregar.length === 0}
-          style={{ fontSize: "13px", padding: "6px 12px" }}
-          title={
-            disponiblesParaAgregar.length === 0
-              ? "No quedan servicios del catálogo para agregar"
-              : "Agregar un servicio"
-          }
-        >
-          + Agregar servicio
-        </Button>
+        {editable && (
+          <Button
+            onClick={abrirCrear}
+            disabled={cargando || disponiblesParaAgregar.length === 0}
+            style={{ fontSize: "13px", padding: "6px 12px" }}
+            title={
+              disponiblesParaAgregar.length === 0
+                ? "No quedan servicios del catálogo para agregar"
+                : "Agregar un servicio"
+            }
+          >
+            + Agregar servicio
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -233,32 +238,36 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
                   </span>
                 </Td>
                 <Td>
-                  <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                    {activo ? (
-                      <>
+                  {editable ? (
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                      {activo ? (
+                        <>
+                          <Button
+                            style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
+                            onClick={() => abrirEditar(ps)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            variant="danger"
+                            style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#d32f2f", color: "#fff" }}
+                            onClick={() => setPsADesactivar(ps)}
+                          >
+                            Desactivar
+                          </Button>
+                        </>
+                      ) : (
                         <Button
-                          style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
-                          onClick={() => abrirEditar(ps)}
+                          style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#16a34a", color: "#fff" }}
+                          onClick={() => cambiarEstado(ps, true)}
                         >
-                          Editar
+                          Reactivar
                         </Button>
-                        <Button
-                          variant="danger"
-                          style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#d32f2f", color: "#fff" }}
-                          onClick={() => setPsADesactivar(ps)}
-                        >
-                          Desactivar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#16a34a", color: "#fff" }}
-                        onClick={() => cambiarEstado(ps, true)}
-                      >
-                        Reactivar
-                      </Button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span style={{ color: "#94a3b8" }}>—</span>
+                  )}
                 </Td>
               </Tr>
             );

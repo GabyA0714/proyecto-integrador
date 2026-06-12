@@ -1,22 +1,32 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { puede } from "../config/permisos";
 import "./Sidebar.css";
 
 const LINKS = [
-  { to: "/admin", label: "Dashboard", end: true },
-  { to: "/admin/usuarios", label: "Usuarios" },
-  { to: "/admin/profesionales", label: "Profesionales" },
-  { to: "/admin/agendas", label: "Agendas" },
-  { to: "/admin/turnos", label: "Turnera" },
-  { to: "/admin/reprogramar", label: "Reprogramar", badge: true },
-  { to: "/admin/reportes", label: "Reportes" },
-  { to: "/admin/servicios", label: "Servicios" },
-  { to: "/admin/categorias", label: "Categorías de Servicios" },
-  { to: "/admin/servicios-profesional", label: "Servicios por Profesional" },
-  { to: "/admin/pacientes", label: "Pacientes" },
-  { to: "/admin/reserva-turno", label: "Reservar Turno" },
-  { to: "/admin/mi-perfil", label: "Mi Perfil" },
+  // Inicio
+  { to: "/admin", label: "Dashboard", end: true, pagina: "dashboard" },
+
+  // Operación diaria
+  { to: "/admin/turnos", label: "Turnera", pagina: "turnos" },
+  { to: "/admin/reserva-turno", label: "Reservar Turno", pagina: "reservaTurno" },
+  { to: "/admin/reprogramar", label: "Reprogramar", badge: true, pagina: "reprogramar" },
+  { to: "/admin/agendas", label: "Agendas", pagina: "agendas" },
+  { to: "/admin/pacientes", label: "Pacientes", pagina: "pacientes" },
+
+  // Catálogo (servicios + categorías + servicios por profesional se unificarán)
+  { to: "/admin/profesionales", label: "Profesionales", pagina: "profesionales" },
+  { to: "/admin/servicios", label: "Servicios", pagina: "servicios" },
+  { to: "/admin/categorias", label: "Categorías de Servicios", pagina: "categorias" },
+  { to: "/admin/servicios-profesional", label: "Servicios por Profesional", pagina: "serviciosProfesional" },
+
+  // Administración
+  { to: "/admin/usuarios", label: "Usuarios", pagina: "usuarios" },
+  { to: "/admin/reportes", label: "Reportes", pagina: "reportes" },
+
+  // Cuenta
+  { to: "/admin/mi-perfil", label: "Mi Perfil", pagina: "miPerfil" },
 ];
 
 function Sidebar({ open = true, onClose, onNavigate }) {
@@ -29,6 +39,12 @@ function Sidebar({ open = true, onClose, onNavigate }) {
 
   useEffect(() => {
     if (!token) return;
+    // El badge de "Reprogramar" solo aplica a roles que ven esa pantalla
+    // (admin/recepción). Para un profesional ni siquiera disparamos el fetch.
+    if (!puede(user?.role, "reprogramar")) {
+      setPendientes(0);
+      return;
+    }
     let activo = true;
     const traer = async () => {
       try {
@@ -53,7 +69,7 @@ function Sidebar({ open = true, onClose, onNavigate }) {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("senda:appointments-changed", onChanged);
     };
-  }, [token, API, location.pathname]);
+  }, [token, API, location.pathname, user?.role]);
 
   const handleLogout = () => {
     logout();
@@ -88,7 +104,7 @@ function Sidebar({ open = true, onClose, onNavigate }) {
 
       <nav>
         <ul>
-          {LINKS.map((l) => (
+          {LINKS.filter((l) => puede(rol, l.pagina)).map((l) => (
             <li key={l.to}>
               <NavLink to={l.to} end={l.end} onClick={() => onNavigate?.()}>
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>

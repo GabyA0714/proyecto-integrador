@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { PacienteFormModal } from "../../components/PacienteFormModal";
 import { obtenerPacientes } from "../../api/patients.api";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { puedeEditar, puede } from "../../config/permisos";
 
 const PURPLE = "#6b21a8";
 const BORDER = "#cbd5e1";
@@ -22,7 +23,9 @@ const PacientesAdmin = () => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [pacienteEditando, setPacienteEditando] = useState(null);
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const editable = puedeEditar(user?.role, "pacientes");   // profesional ve, no edita
+  const puedeReservar = puede(user?.role, "reservaTurno");  // profesional no reserva
   const navigate = useNavigate();
 
   const cargarPacientes = async (search = "") => {
@@ -57,7 +60,7 @@ const PacientesAdmin = () => {
     <div>
       <PageHeader
         title="Gestión de Pacientes"
-        actions={<Button onClick={abrirAlta}>+ Nuevo Paciente</Button>}
+        actions={editable ? <Button onClick={abrirAlta}>+ Nuevo Paciente</Button> : null}
       />
 
       {/* Buscador / filtro */}
@@ -107,14 +110,18 @@ const PacientesAdmin = () => {
                     onClick={() => navigate(`/admin/pacientes/${p.id}`)}>
                     Ver
                   </Button>
-                  <Button style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
-                    onClick={() => abrirEdicion(p)}>
-                    Editar
-                  </Button>
-                  <Button style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: PURPLE }}
-                    onClick={() => navigate("/admin/reserva-turno", { state: { patient: { id: p.id, name: p.person?.name } } })}>
-                    Turno
-                  </Button>
+                  {editable && (
+                    <Button style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
+                      onClick={() => abrirEdicion(p)}>
+                      Editar
+                    </Button>
+                  )}
+                  {puedeReservar && (
+                    <Button style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: PURPLE }}
+                      onClick={() => navigate("/admin/reserva-turno", { state: { patient: { id: p.id, name: p.person?.name } } })}>
+                      Turno
+                    </Button>
+                  )}
                 </div>
               </Td>
             </Tr>

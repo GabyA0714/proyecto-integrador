@@ -96,13 +96,18 @@ function MiniCalendario({ year, month, dias, diaSel, onPick, onNav }) {
 //  Panel de reserva
 // ════════════════════════════════════════════════════════════════
 export default function ReservaTurno({ onCreated, embedded = false }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const banner = useBanner();
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
   const headers = { Authorization: `Bearer ${token}` };
   const jsonHeaders = { "Content-Type": "application/json", ...headers };
+
+  // El profesional solo agenda en SU propia agenda: modo fijo "por profesional",
+  // su ficha fija, y sin sobreturno (eso queda para admin/recepción).
+  const esProfesional = user?.role === "PROFESSIONAL";
+  const miProfId = user?.professionalId || "";
 
   const [modo, setModo] = useState("profesional"); // 'profesional' | 'servicio'
   const [sobreturno, setSobreturno] = useState(false);
@@ -149,6 +154,15 @@ export default function ReservaTurno({ onCreated, embedded = false }) {
 
   // ── Carga inicial de catálogos ──
   useEffect(() => {
+    // El profesional no puede listar /professionals: fija su propia ficha
+    // (que dispara la carga de sus servicios) y no trae el catálogo global.
+    if (esProfesional) {
+      if (miProfId) {
+        setProfesionales([{ id: miProfId, person: { name: user?.person?.name || "Mi agenda" } }]);
+        setProfSel(miProfId);
+      }
+      return;
+    }
     (async () => {
       try {
         const [rp, rs] = await Promise.all([
@@ -410,12 +424,14 @@ export default function ReservaTurno({ onCreated, embedded = false }) {
         />
       )}
 
-      {/* Pestañas + toggle de sobreturno */}
+      {/* Pestañas + toggle de sobreturno (no aplican al profesional) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" style={tabBtn(modo === "profesional")} onClick={() => setModo("profesional")}>Por profesional</button>
-          <button type="button" style={tabBtn(modo === "servicio")} onClick={() => setModo("servicio")}>Por servicio</button>
-        </div>
+        {!esProfesional ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" style={tabBtn(modo === "profesional")} onClick={() => setModo("profesional")}>Por profesional</button>
+            <button type="button" style={tabBtn(modo === "servicio")} onClick={() => setModo("servicio")}>Por servicio</button>
+          </div>
+        ) : <div />}
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: sobreturno ? WARN_TX : MUTED, fontWeight: sobreturno ? "bold" : "normal", background: sobreturno ? WARN_BG : "transparent", borderRadius: 8, padding: "4px 10px" }}>
           <input type="checkbox" checked={sobreturno} onChange={(e) => cambiarSobreturno(e.target.checked)} />
           Sobreturno (ignora agenda)
@@ -431,7 +447,7 @@ export default function ReservaTurno({ onCreated, embedded = false }) {
             <>
               <div>
                 <label style={lbl}>1 · Profesional</label>
-                <select value={profSel} onChange={(e) => setProfSel(e.target.value)} style={sel}>
+                <select value={profSel} onChange={(e) => setProfSel(e.target.value)} style={sel} disabled={esProfesional}>
                   <option value="">Seleccionar…</option>
                   {profesionales.map((p) => <option key={p.id} value={p.id}>{p.person?.name}</option>)}
                 </select>
@@ -440,7 +456,13 @@ export default function ReservaTurno({ onCreated, embedded = false }) {
               <div>
                 <label style={lbl}>2 · Servicios (uno o varios)</label>
                 <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", background: "#fff" }}>
-                  {serviciosProf.length === 0 && <div style={vacio}>Elegí un profesional…</div>}
+                  {serviciosProf.length === 0 && (
+                    <div style={vacio}>
+                      {profSel
+                        ? (esProfesional ? "No tenés servicios cargados." : "Este profesional no tiene servicios cargados.")
+                        : "Elegí un profesional…"}
+                    </div>
+                  )}
                   {serviciosProf.map((s) => {
                     const on = elegidos.includes(s.serviceId);
                     return (

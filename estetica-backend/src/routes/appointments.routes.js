@@ -122,8 +122,8 @@ router.get('/', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PROFES
  */
 
 
-router.post('/overbook', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST']), crearSobreturno);
-router.post('/', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST']), crearTurno);
+router.post('/overbook', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PROFESSIONAL']), crearSobreturno);
+router.post('/', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PROFESSIONAL']), crearTurno);
 
 /**
  * @swagger
@@ -218,6 +218,6 @@ router.get('/:id', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PRO
 
 
 router.patch('/:id/status',    verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PROFESSIONAL']), cambiarEstadoTurno);
-router.patch('/:id/reschedule', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST']), reprogramarTurno);
+router.patch('/:id/reschedule', verificarToken, autorizarRoles(['ADMIN', 'RECEPTIONIST', 'PROFESSIONAL']), reprogramarTurno);
 
 export default router;

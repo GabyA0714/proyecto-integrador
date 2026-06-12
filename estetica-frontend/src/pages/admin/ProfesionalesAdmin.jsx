@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Input } from "../../components/ui/Input";
 import { useAuth } from "../../hooks/useAuth";
+import { puedeEditar } from "../../config/permisos";
 import { useBanner } from "../../components/ui/Banner";
 import { PageHeader } from "../../components/ui/PageHeader";
 
@@ -44,7 +45,8 @@ const ProfesionalesAdmin = () => {
   const [cargandoForm, setCargandoForm] = useState(false);
   const [confirmDataProf, setConfirmDataProf] = useState(null); // persona existente a asociar
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const editable = puedeEditar(user?.role, "profesionales"); // recepción ve, no edita
   const banner = useBanner();
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
@@ -220,7 +222,7 @@ const ProfesionalesAdmin = () => {
     <div>
       <PageHeader
         title="Gestión de Profesionales"
-        actions={<Button onClick={abrirModalCrear}>+ Nuevo Profesional</Button>}
+        actions={editable ? <Button onClick={abrirModalCrear}>+ Nuevo Profesional</Button> : null}
       />
 
       {error && (
@@ -267,19 +269,23 @@ const ProfesionalesAdmin = () => {
                   >
                     Ver
                   </Button>
-                  <Button
-                    style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
-                    onClick={() => abrirModalEditar(p)}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant={estaActivo ? "danger" : "primary"}
-                    style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: estaActivo ? "#d32f2f" : "#16a34a", color: "#fff" }}
-                    onClick={() => confirmarCambioEstado(p)}
-                  >
-                    {estaActivo ? "Desactivar" : "Activar"}
-                  </Button>
+                  {editable && (
+                    <>
+                      <Button
+                        style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
+                        onClick={() => abrirModalEditar(p)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant={estaActivo ? "danger" : "primary"}
+                        style={{ padding: "6px 12px", fontSize: "12px", backgroundColor: estaActivo ? "#d32f2f" : "#16a34a", color: "#fff" }}
+                        onClick={() => confirmarCambioEstado(p)}
+                      >
+                        {estaActivo ? "Desactivar" : "Activar"}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </Td>
             </Tr>

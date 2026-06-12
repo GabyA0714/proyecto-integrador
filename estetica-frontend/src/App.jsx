@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/AdminLayout";
+import { useAuth } from "./hooks/useAuth";
+import { PERMISOS, ROLES_STAFF, ROLES } from "./config/permisos";
 
 // Páginas Públicas
 import Login from "./pages/Login";
@@ -14,7 +16,7 @@ import UsuariosAdmin from "./pages/admin/UsuariosAdmin";
 import ProfesionalesAdmin from "./pages/admin/ProfesionalesAdmin";
 import ServiciosAdmin from "./pages/admin/ServiciosAdmin";
 import TurnosAdmin from "./pages/admin/TurnosAdmin";
-import CambiarPassword from "./pages/admin/CambiarPassword";
+import MiPerfil from "./pages/admin/MiPerfil";
 import AperturaAgenda from "./pages/admin/AperturaAgenda";
 import CalendarioSemanal from "./pages/admin/CalendarioSemanal";
 import PacientesAdmin from "./pages/admin/PacientesAdmin";
@@ -27,8 +29,17 @@ import ReservaTurno from "./pages/admin/ReservaTurno";
 import ReprogramarAdmin from "./pages/admin/ReprogramarAdmin";
 
 
-// Páginas de Paciente (Comentado temporalmente por QA)
-// import PacienteDashboard from "./pages/paciente/Dashboard";
+
+const Pagina = ({ pagina, children }) => (
+  <ProtectedRoute rolesPermitidos={PERMISOS[pagina]}>{children}</ProtectedRoute>
+);
+const InicioPorRol = () => {
+  const { user } = useAuth();
+  if (user?.role === ROLES.ADMIN || user?.role === ROLES.PROFESSIONAL) {
+    return <AdminDashboard />;
+  }
+  return <Navigate to="/admin/turnos" replace />;
+};
 
 function App() {
   return (
@@ -42,31 +53,33 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/no-autorizado" element={<NoAutorizado />} />
 
-        {/* --- RUTAS DE ADMINISTRADOR (CON LAYOUT Y MENÚ) --- */}
+
         <Route
           path="/admin"
           element={
-            <ProtectedRoute rolesPermitidos={["ADMIN"]}>
+            <ProtectedRoute rolesPermitidos={ROLES_STAFF}>
               <AdminLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<AdminDashboard />} />
-          <Route path="usuarios" element={<UsuariosAdmin />} />
-          <Route path="profesionales" element={<ProfesionalesAdmin />} />
-          <Route path="servicios" element={<ServiciosAdmin />} />
-          <Route path="turnos" element={<TurnosAdmin />} />
-          <Route path="reportes" element={<ReportesAdmin />} />
-          <Route path="calendario" element={<CalendarioSemanal />} />
-          <Route path="agendas" element={<AperturaAgenda />} />
-          <Route path="mi-perfil" element={<CambiarPassword />} />
-          <Route path="pacientes" element={<PacientesAdmin />} />
-          <Route path="pacientes/:id" element={<FichaPacienteAdmin />} />
-          <Route path="categorias" element={<CategoriaServiciosAdmin />} />
-          <Route path="servicios-profesional" element={<ProfessionalServicesAdmin />} />
-          <Route path="profesionales/:id" element={<FichaProfesionalAdmin />} />
-          <Route path="reserva-turno" element={<ReservaTurno />} />
-          <Route path="reprogramar" element={<ReprogramarAdmin />} />
+          {/* Índice: Dashboard para ADMIN, Turnera para el resto */}
+          <Route index element={<InicioPorRol />} />
+
+          <Route path="usuarios" element={<Pagina pagina="usuarios"><UsuariosAdmin /></Pagina>} />
+          <Route path="profesionales" element={<Pagina pagina="profesionales"><ProfesionalesAdmin /></Pagina>} />
+          <Route path="servicios" element={<Pagina pagina="servicios"><ServiciosAdmin /></Pagina>} />
+          <Route path="turnos" element={<Pagina pagina="turnos"><TurnosAdmin /></Pagina>} />
+          <Route path="reportes" element={<Pagina pagina="reportes"><ReportesAdmin /></Pagina>} />
+          <Route path="calendario" element={<Pagina pagina="calendario"><CalendarioSemanal /></Pagina>} />
+          <Route path="agendas" element={<Pagina pagina="agendas"><AperturaAgenda /></Pagina>} />
+          <Route path="mi-perfil" element={<Pagina pagina="miPerfil"><MiPerfil /></Pagina>} />
+          <Route path="pacientes" element={<Pagina pagina="pacientes"><PacientesAdmin /></Pagina>} />
+          <Route path="pacientes/:id" element={<Pagina pagina="pacientes"><FichaPacienteAdmin /></Pagina>} />
+          <Route path="categorias" element={<Pagina pagina="categorias"><CategoriaServiciosAdmin /></Pagina>} />
+          <Route path="servicios-profesional" element={<Pagina pagina="serviciosProfesional"><ProfessionalServicesAdmin /></Pagina>} />
+          <Route path="profesionales/:id" element={<Pagina pagina="fichaProfesional"><FichaProfesionalAdmin /></Pagina>} />
+          <Route path="reserva-turno" element={<Pagina pagina="reservaTurno"><ReservaTurno /></Pagina>} />
+          <Route path="reprogramar" element={<Pagina pagina="reprogramar"><ReprogramarAdmin /></Pagina>} />
         </Route>
 
         {/* --- RUTAS DE PACIENTE (Comentadas temporalmente por QA) --- */}

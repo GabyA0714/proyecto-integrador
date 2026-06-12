@@ -180,13 +180,21 @@ Una guía rápida de qué comando usar en cada situación (todos desde `estetica
  
 | Situación | Comando |
 |---|---|
-| Cambiaste el `schema.prisma` (agregaste un campo o tabla) | `npx prisma migrate dev --name descripcion_del_cambio` |
-| Hiciste `git pull` y un compañero subió migraciones nuevas (agrego un campo o tabla) y la base quedo desincronizada | `npx prisma migrate deploy` y `npx prisma generate`|
+| Cambiaste el `schema.prisma` (agregaste/modificaste un campo o tabla) | `npx prisma migrate dev --name descripcion_del_cambio` |
+| Hiciste `git pull` y hay migraciones nuevas de un compañero | `npx prisma migrate deploy` y después `npx prisma generate` |
 | Reinstalaste `node_modules` sin tocar el schema | `npx prisma generate` |
-| Querés ver/editar los datos visualmente | `npx prisma studio` |
-| Resetear los datos a cero | `node prisma/reset-data.js` |
-| Levantar backend en desarrollo | `npm run dev` |
-| Levantar frontend en desarrollo (desde `estetica-frontend/`) | `npm run dev` |
+| La base falla o quedó desincronizada (ej.: error de UUID al crear usuario). ⚠ Borra TODOS los datos y recarga el seed solo | `npx prisma migrate reset` |
+| Querés vaciar los datos sin tocar la estructura, y recargarlos a mano | `node prisma/reset-data.js` y después `node prisma/seed.js` |
+| Se traba con `EPERM ...query_engine-windows.dll.node` (con el backend FRENADO) | `taskkill /F /IM node.exe`, después `Remove-Item -Recurse -Force node_modules\.prisma` (en CMD: `rmdir /S /Q node_modules\.prisma`) y por último `npx prisma generate` |
+| Ver/editar los datos visualmente | `npx prisma studio` |
+| Levantar el backend (desde `estetica-backend/`) | `npm run dev` |
+| Levantar el frontend (desde `estetica-frontend/`) | `npm run dev` |
+
+**Regla de oro:** antes de correr cualquier comando de Prisma, frená el backend (`Ctrl+C`). Eso evita el 90% de los `EPERM`.
+
+**Diferencia entre los dos "reset":**
+- `npx prisma migrate reset` → reconstruye TODO (borra, recrea las tablas y corre el seed solo). Para cuando la base quedó rota o desincronizada.
+- `node prisma/reset-data.js` → solo vacía los datos, deja las tablas. Después tenés que recargar con `node prisma/seed.js` (o `seed2.js`).
  
 ## Notas
 

@@ -138,8 +138,13 @@ const BadgeSlot = ({ conTurnos }) => (
 // COMPONENTE PRINCIPAL
 // ════════════════════════════════════════════════════════════════
 const AperturaAgenda = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+  // Si quien entra es un profesional, gestiona ÚNICAMENTE su propia agenda:
+  // fijamos su id y bloqueamos el selector (no puede operar sobre otros).
+  const esProfesional = user?.role === "PROFESSIONAL";
+  const miProfId = user?.professionalId || "";
 
   const hoy = new Date();
   const [profSelId, setProfSelId] = useState("");
@@ -237,6 +242,19 @@ const AperturaAgenda = () => {
   // ── Fetch: profesionales ──
   useEffect(() => {
     if (!token) return;
+
+    // Un profesional no puede (ni necesita) listar a todos: la ruta /professionals
+    // es solo ADMIN/RECEPTIONIST, y además solo gestiona su propia agenda. Fijamos
+    // su id desde el login y nos saltamos el fetch.
+    if (esProfesional) {
+      if (miProfId) {
+        setProfesionales([{ id: miProfId, person: { name: user?.person?.name || "Mi agenda" } }]);
+        setProfSelId(miProfId);
+      }
+      setCargandoProf(false);
+      return;
+    }
+
     const fetchProfs = async () => {
       try {
         const res = await fetch(`${API}/professionals`, { headers: headers() });
@@ -250,7 +268,7 @@ const AperturaAgenda = () => {
       }
     };
     fetchProfs();
-  }, [token]);
+  }, [token, esProfesional, miProfId]);
 
   // ── Fetch: horarios recurrentes ──
   const cargarHorarios = useCallback(async (profId) => {
@@ -730,12 +748,12 @@ const AperturaAgenda = () => {
       <div style={{ ...S.card, marginBottom: "24px" }}>
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", alignItems: "flex-end" }}>
           <div style={{ flex: "2", minWidth: "220px" }}>
-            <label style={S.label}>Profesional</label>
+            <label style={S.label}>Profesional{esProfesional ? " (tu agenda)" : ""}</label>
             <select
               style={S.select}
               value={profSelId}
               onChange={(e) => { setProfSelId(e.target.value); setErrorGlobal(""); }}
-              disabled={cargandoProf}
+              disabled={cargandoProf || esProfesional}
             >
               <option value="">
                 {cargandoProf ? "Cargando profesionales..." : "— Seleccioná un profesional —"}

@@ -1,13 +1,13 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
-import { 
-  register, 
-  login, 
-  perfil, 
-  forgotPassword, 
-  resetPassword   
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import {
+  register,
+  login,
+  perfil,
+  forgotPassword,
+  resetPassword
 } from '../controllers/auth.controller.js';
-import verificarToken from '../middleware/verificarToken.js'; 
+import verificarToken from '../middleware/verificarToken.js';
 
 const router = express.Router();
 
@@ -15,19 +15,40 @@ const router = express.Router();
 // CONFIGURACIÓN DE SEGURIDAD (RATE LIMITING)
 // ==========================================
 
-// Bloqueo para evitar ataques de fuerza bruta en el Login (5 intentos max)
-const loginLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora de bloqueo
-  max: 5, // Límite de 5 intentos por IP
-  message: { message: "Has superado el límite de 5 intentos fallidos. Por seguridad, esperá 1 hora antes de volver a intentar." },
+// Límite general por IP (usa ipKeyGenerator para no romper con IPv6 en v7).
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100,
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
+  message: { message: "Demasiados intentos desde esta IP, intentá más tarde." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Bloqueo para evitar spam de correos de recuperación (3 intentos max)
+// Bloqueo de fuerza bruta en el login (5 intentos FALLIDOS por cuenta).
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // ventana de 15 minutos
+  max: 5,
+  // Solo cuentan los intentos fallidos: un login exitoso no suma ni bloquea.
+  skipSuccessfulRequests: true,
+  // Limitamos por cuenta (email), no por IP. En la clínica todos comparten la
+  // misma IP, así que limitar por IP bloqueaba a unos por los errores de otros.
+  // Si no viene email, caemos al IP normalizado (ipKeyGenerator) para no romper
+  // con IPv6 en express-rate-limit v7.
+  keyGenerator: (req, res) => {
+    const email = (req.body?.email || "").toLowerCase().trim();
+    return email || ipKeyGenerator(req, res);
+  },
+  message: { message: "Demasiados intentos fallidos para esta cuenta. Por seguridad, esperá 15 minutos antes de volver a intentar." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Bloqueo para evitar spam de correos de recuperación (3 intentos max).
 const emailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora de bloqueo
   max: 3, // Límite de 3 intentos por IP
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
   message: { message: "Demasiados intentos de recuperación. Esperá 1 hora." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -78,7 +99,7 @@ router.post('/register', register);
  *         description: Credenciales inválidas
  *       429:
  *         description: Demasiados intentos fallidos
- */ 
+ */
 router.post('/login', loginLimiter, login);
 
 /**
