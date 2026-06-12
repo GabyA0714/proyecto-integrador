@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { homePorRol } from "../config/permisos";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
 
@@ -45,21 +46,9 @@ const Login = () => {
       // Guardamos la info en el estado global
       login({ token: datos.token, user: datos.user });
 
-      // Redirigimos según el rol
-      switch(datos.user.role) {
-        case "ADMIN":
-        case "RECEPTIONIST":
-          navigate("/admin");
-          break;
-        case "PATIENT":
-          navigate("/paciente");
-          break;
-        case "PROFESSIONAL":
-          navigate("/tecnico");
-          break;
-        default:
-          navigate("/no-autorizado");
-      }
+      // Redirigimos según el rol (homePorRol vive en config/permisos.js,
+      // así el destino de cada rol queda en un solo lugar)
+      navigate(homePorRol(datos.user.role));
 
     } catch (err) {
       setError(err.message);

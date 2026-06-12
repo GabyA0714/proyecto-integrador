@@ -152,7 +152,7 @@ router.patch(
 router.get(
   "/professional-services/by-professional/:professionalId",
   verificarToken,
-  autorizarRoles(["ADMIN", "PROFESSIONAL"]),
+  autorizarRoles(["ADMIN", "RECEPTIONIST", "PROFESSIONAL"]),
   obtenerServiciosPorProfesional,
 );
 

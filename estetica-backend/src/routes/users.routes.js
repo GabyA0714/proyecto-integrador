@@ -11,6 +11,7 @@ import {
   desactivarUsuario, 
   activarUsuario,    
   buscarPersonas,   
+  verificarDocumento,
   obtenerMiPerfil,   
   actualizarMiPerfil 
 } from '../controllers/users.controller.js';
@@ -75,6 +76,15 @@ router.get(
   "/people",
   verificarToken,
   buscarPersonas
+);
+
+// Verifica un documento SIN crear nada: dice si la persona existe, si ya tiene
+// usuario y qué fichas tiene. Va antes de "/:id" para que no se confunda con un id.
+router.get(
+  "/check-document",
+  verificarToken,
+  autorizarRoles(["ADMIN"]),
+  verificarDocumento
 );
 
 // PERFIL PROPIO — cualquier usuario logueado puede ver/editar sus datos.

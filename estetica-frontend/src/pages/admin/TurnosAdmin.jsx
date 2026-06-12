@@ -123,10 +123,10 @@ const Columna = ({ items, colorDe, onPick }) => (
   </div>
 );
 
-// ─── Columna vertical de COBERTURA (un día = bloques de disponibilidad) ──
-// Cada bloque es una franja de agenda abierta de un profesional. Se colorea
-// por profesional y, si tiene turnos cargados, los muestra como ocupación.
-const ColumnaCobertura = ({ slots, colorDe, nombreDe }) => {
+// ─── Columna vertical de DISPONIBILIDAD (un día = bloques de agenda abierta) ──
+// Cada bloque es una franja de agenda de un profesional. Se colorea por
+// profesional y muestra cuántos turnos tiene reservados (o "libre").
+const ColumnaCobertura = ({ slots, colorDe, nombreDe, onPick }) => {
   // Mapeamos cada slot a la forma que entiende `empacar`.
   const items = slots.map((s) => ({ ...s, startsAt: s.startTime, endsAt: s.endTime }));
   return (
@@ -142,12 +142,13 @@ const ColumnaCobertura = ({ slots, colorDe, nombreDe }) => {
         const w = 100 / lanes;
         return (
           <div key={t.id}
+            onClick={() => onPick && onPick(t)}
             title={`${nombreDe[t.professionalId] || ""} · ${fmtHora(t.startTime)}–${fmtHora(t.endTime)}${ocupados ? ` · ${ocupados} turno${ocupados === 1 ? "" : "s"}` : " · libre"}`}
             style={{
               position: "absolute", top, height, left: `calc(${w * col}% + 2px)`, width: `calc(${w}% - 4px)`,
               background: `${color}14`, border: `1px solid ${color}40`, borderLeft: `3px solid ${color}`,
               borderRadius: 6, padding: "3px 6px", overflow: "hidden", fontSize: 11, lineHeight: 1.2,
-              boxSizing: "border-box",
+              boxSizing: "border-box", cursor: onPick ? "pointer" : "default",
             }}>
             <div style={{ fontWeight: 700, color, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {nombreDe[t.professionalId] || "—"}
@@ -155,7 +156,7 @@ const ColumnaCobertura = ({ slots, colorDe, nombreDe }) => {
             <div style={{ color: "#475569", whiteSpace: "nowrap" }}>{fmtHora(t.startTime)}–{fmtHora(t.endTime)}</div>
             {height > 50 && (
               <div style={{ color: "#64748b" }}>
-                {ocupados > 0 ? `${ocupados} turno${ocupados === 1 ? "" : "s"}` : "libre"}
+                {ocupados > 0 ? `${ocupados} turno${ocupados === 1 ? "" : "s"} reservado${ocupados === 1 ? "" : "s"}` : "libre"}
               </div>
             )}
           </div>
@@ -165,8 +166,8 @@ const ColumnaCobertura = ({ slots, colorDe, nombreDe }) => {
   );
 };
 
-// ─── Vista Cobertura (semanal: columnas por día, eje horario vertical) ──
-const CoberturaVista = ({ dias, slots, colorDe, nombreDe }) => {
+// ─── Vista Disponibilidad (semanal: columnas por día, eje horario vertical) ──
+const CoberturaVista = ({ dias, slots, colorDe, nombreDe, onPick }) => {
   const horas = Array.from({ length: HORA_FIN - HORA_INI }, (_, i) => HORA_INI + i);
   const minCol = 132;
   const slotsDe = (d) => slots.filter((s) => s.fecha === d);
@@ -179,8 +180,9 @@ const CoberturaVista = ({ dias, slots, colorDe, nombreDe }) => {
         <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, background: "#fff", zIndex: 2 }}>
           <div style={{ width: GUTTER, flex: `0 0 ${GUTTER}px` }} />
           {dias.map((d) => {
-            const n = slotsDe(d).length;
-            const profsDelDia = new Set(slotsDe(d).map((s) => s.professionalId)).size;
+            const slotsDia = slotsDe(d);
+            const nFranjas = slotsDia.length;
+            const reservados = slotsDia.reduce((acc, s) => acc + (s.appointments || []).filter((a) => !CANCELADO(a.status)).length, 0);
             const esHoy = d === fechaClinicaStr();
             return (
               <div key={d} style={{ flex: `1 0 ${minCol}px`, padding: "8px 6px", textAlign: "center", borderLeft: "1px solid #e2e8f0", background: esHoy ? "#f5f3ff" : "#fff" }}>
@@ -188,7 +190,7 @@ const CoberturaVista = ({ dias, slots, colorDe, nombreDe }) => {
                   {fmtFechaLarga(d)}
                 </div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>
-                  {profsDelDia > 0 ? `${profsDelDia} prof. · ${n} franja${n === 1 ? "" : "s"}` : "sin agenda"}
+                  {nFranjas > 0 ? `${nFranjas} franja${nFranjas === 1 ? "" : "s"} · ${reservados} reservado${reservados === 1 ? "" : "s"}` : "sin agenda"}
                 </div>
               </div>
             );
@@ -208,7 +210,7 @@ const CoberturaVista = ({ dias, slots, colorDe, nombreDe }) => {
           {/* Columnas por día */}
           {dias.map((d) => (
             <div key={d} style={{ flex: `1 0 ${minCol}px` }}>
-              <ColumnaCobertura slots={slotsDe(d)} colorDe={colorDe} nombreDe={nombreDe} />
+              <ColumnaCobertura slots={slotsDe(d)} colorDe={colorDe} nombreDe={nombreDe} onPick={onPick} />
             </div>
           ))}
         </div>
@@ -225,9 +227,14 @@ const CoberturaVista = ({ dias, slots, colorDe, nombreDe }) => {
 
 // ════════════════════════════════════════════════════════════
 const TurnosAdmin = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+
+  // Un profesional no puede listar /professionals (ruta ADMIN/RECEPTIONIST) y
+  // solo ve lo suyo: armamos su propio item y lo dejamos seleccionado.
+  const esProfesional = user?.role === "PROFESSIONAL";
+  const miProfId = user?.professionalId || "";
 
   const [vista, setVista] = useState("dia"); // 'dia' | 'semana' | 'cobertura'
   const [ancla, setAncla] = useState(fechaClinicaStr()); // YYYY-MM-DD enfocado
@@ -242,6 +249,9 @@ const TurnosAdmin = () => {
   const [cargandoCob, setCargandoCob] = useState(false);
 
   const [detalle, setDetalle] = useState(null);
+  const [detalleSlot, setDetalleSlot] = useState(null); // franja de disponibilidad clickeada
+  const [slotTurnos, setSlotTurnos] = useState([]);     // turnos de la franja abierta
+  const [cargandoSlot, setCargandoSlot] = useState(false);
   const [modalNuevo, setModalNuevo] = useState(false);
 
   const navigate = useNavigate();
@@ -278,7 +288,7 @@ const TurnosAdmin = () => {
     return Array.from({ length: 7 }, (_, i) => addDays(ini, i));
   }, [semanal, ancla]);
 
-  // Color y nombre estables por profesional
+  // Color estable por profesional
   const colorDe = useMemo(() => {
     const m = {};
     profesionales.forEach((p, i) => { m[p.id] = PALETA[i % PALETA.length]; });
@@ -294,6 +304,13 @@ const TurnosAdmin = () => {
   // ── Cargar profesionales (y seleccionarlos todos por defecto) ──
   useEffect(() => {
     if (!token) return;
+    // El profesional no lista a los demás: se arma su propio item y queda fijo.
+    if (esProfesional) {
+      const propio = miProfId ? [{ id: miProfId, person: { name: user?.person?.name || "Mis turnos" } }] : [];
+      setProfesionales(propio);
+      setProfSel(propio.map((p) => p.id));
+      return;
+    }
     fetch(`${apiUrl}/professionals`, { headers })
       .then((r) => r.json())
       .then((d) => {
@@ -302,11 +319,11 @@ const TurnosAdmin = () => {
         setProfSel(list.map((p) => p.id));
       })
       .catch(() => setProfesionales([]));
-  }, [token]);
+  }, [token, esProfesional, miProfId]);
 
   // ── Cargar turnos del rango visible (Día / Semana) ──
   const cargarTurnos = useCallback(async () => {
-    if (!token || esCobertura) return; // en Cobertura no usamos turnos
+    if (!token || esCobertura) return; // en Disponibilidad usamos los slots de agenda
     setCargando(true);
     const desde = `${rango.ini}T00:00:00.000Z`;
     const hasta = `${rango.fin}T23:59:59.999Z`;
@@ -399,6 +416,43 @@ const TurnosAdmin = () => {
   const todos = () => setProfSel(profesionales.map((p) => p.id));
   const ninguno = () => setProfSel([]);
 
+  // ── Detalle de una franja de disponibilidad ──────────────────
+  // Hacemos el modal autosuficiente: además de lo que venga embebido en el
+  // slot (slot.appointments), pedimos los turnos del día y filtramos por
+  // availabilityId. Así el detalle muestra los turnos aunque el endpoint de
+  // disponibilidad cambie de forma (datos "lean" vs. completos) entre deploys.
+  const abrirSlot = useCallback(async (slot) => {
+    if (!slot) return;
+    setDetalleSlot(slot);
+    // Mostramos de entrada lo que ya traía el slot (respuesta instantánea)
+    setSlotTurnos(Array.isArray(slot.appointments) ? slot.appointments : []);
+    if (!token) return;
+    setCargandoSlot(true);
+    try {
+      const desde = `${slot.fecha}T00:00:00.000Z`;
+      const hasta = `${slot.fecha}T23:59:59.999Z`;
+      const res = await fetch(
+        `${apiUrl}/appointments?desde=${desde}&hasta=${hasta}`,
+        { headers }
+      );
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const lista = data.filter((t) => t.availabilityId === slot.id);
+        setSlotTurnos(lista);
+      }
+    } catch {
+      /* silencioso: conservamos lo que ya mostramos del slot */
+    } finally {
+      setCargandoSlot(false);
+    }
+  }, [token, apiUrl, headers]);
+
+  const cerrarSlot = () => {
+    setDetalleSlot(null);
+    setSlotTurnos([]);
+    setCargandoSlot(false);
+  };
+
   const horas = Array.from({ length: HORA_FIN - HORA_INI }, (_, i) => HORA_INI + i);
 
   const tituloRango = semanal
@@ -449,7 +503,7 @@ const TurnosAdmin = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {/* Vista */}
           <div style={{ display: "flex", border: "1px solid #cbd5e1", borderRadius: 8, overflow: "hidden" }}>
-            {[["dia", "Día"], ["semana", "Semana"], ["cobertura", "Cobertura"]].map(([v, txt]) => (
+            {[["cobertura", "Disponibilidad"], ["dia", "Día"], ["semana", "Semana"]].map(([v, txt]) => (
               <button key={v} type="button" onClick={() => setVista(v)}
                 style={{ border: "none", padding: "7px 16px", fontSize: 13, cursor: "pointer",
                   background: vista === v ? "#6b21a8" : "#fff", color: vista === v ? "#fff" : "#475569", fontWeight: vista === v ? 700 : 400 }}>
@@ -499,8 +553,8 @@ const TurnosAdmin = () => {
 
         {esCobertura && (
           <div style={{ fontSize: 12, color: "#64748b", borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
-            Mostrando las <strong>agendas abiertas</strong> de la semana (no los turnos). Cada bloque es una franja de
-            disponibilidad; el detalle indica si está libre o cuántos turnos tiene cargados.
+            Mostrando las <strong>agendas abiertas</strong> de la semana. Cada bloque es una franja de
+            disponibilidad e indica cuántos turnos tiene reservados. Hacé clic en una franja para ver el detalle de sus turnos.
           </div>
         )}
       </div>
@@ -511,10 +565,10 @@ const TurnosAdmin = () => {
           <p style={{ color: "#94a3b8", textAlign: "center", padding: "40px 0" }}>Cargando agendas…</p>
         ) : profsVisibles.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10 }}>
-            Elegí al menos un profesional para ver la cobertura.
+            Elegí al menos un profesional para ver la disponibilidad.
           </div>
         ) : (
-          <CoberturaVista dias={dias} slots={slotsCob} colorDe={colorDe} nombreDe={nombreDe} />
+          <CoberturaVista dias={dias} slots={slotsCob} colorDe={colorDe} nombreDe={nombreDe} onPick={abrirSlot} />
         )
       ) : cargando ? (
         <p style={{ color: "#94a3b8", textAlign: "center", padding: "40px 0" }}>Cargando agenda…</p>
@@ -584,6 +638,73 @@ const TurnosAdmin = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ── Modal detalle de la DISPONIBILIDAD (franja de agenda) ── */}
+      <Modal isOpen={!!detalleSlot} onClose={cerrarSlot} title="Detalle de la disponibilidad">
+        {detalleSlot && (() => {
+          const appts = (slotTurnos || []).slice().sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+          const reservados = appts.filter((a) => !CANCELADO(a.status)).length;
+          const color = colorDe[detalleSlot.professionalId] || "#6b21a8";
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14 }}>
+              <p style={{ margin: 0 }}>
+                <strong>Profesional:</strong>{" "}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
+                  {nombreDe[detalleSlot.professionalId] || "—"}
+                </span>
+              </p>
+              <p style={{ margin: 0, textTransform: "capitalize" }}>
+                <strong>Fecha:</strong> {fmtFechaLarga(detalleSlot.fecha)}
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>Horario:</strong> {fmtHora(detalleSlot.startTime)} – {fmtHora(detalleSlot.endTime)}
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>Turnos reservados:</strong>{" "}
+                {cargandoSlot
+                  ? <span style={{ color: "#94a3b8" }}>cargando…</span>
+                  : reservados === 0
+                    ? <span style={{ color: "#16a34a", fontWeight: 600 }}>Ninguno (franja libre)</span>
+                    : <span style={{ color: "#475569" }}>{reservados}</span>}
+              </p>
+
+              {cargandoSlot && appts.length === 0 && (
+                <p style={{ margin: "4px 0", color: "#94a3b8" }}>Buscando turnos de esta franja…</p>
+              )}
+
+              {appts.length > 0 && (
+                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {appts.map((a) => {
+                    const cancel = CANCELADO(a.status);
+                    const d = a.startsAt ? new Date(a.startsAt) : null;
+                    const hora = d && !isNaN(d) ? fmtHora(a.startsAt) : "—";
+                    return (
+                      <div key={a.id}
+                        onClick={() => setDetalle(a)}
+                        title="Ver detalle del turno"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px",
+                          border: "1px solid #e2e8f0", borderLeft: `3px solid ${color}`, borderRadius: 8,
+                          background: "#fff", opacity: cancel ? 0.6 : 1, cursor: "pointer",
+                        }}>
+                        <span style={{ fontWeight: 700, color, whiteSpace: "nowrap", textDecoration: cancel ? "line-through" : "none" }}>
+                          {hora}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, color: "#334155", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {a.patient?.person?.name || "—"}
+                          <span style={{ color: "#94a3b8" }}> · {a.professionalService?.service?.name || "—"}</span>
+                        </span>
+                        <Badge map={ESTADOS} value={a.status} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

@@ -88,7 +88,7 @@ export const login = async (req, res) => {
 
     const persona = await prisma.people.findFirst({
       where: { email, user: { isNot: null } },
-      include: { user: true }
+      include: { user: true, professional: { select: { id: true } } }
     });
 
     if (!persona || !persona.user) {
@@ -121,6 +121,9 @@ export const login = async (req, res) => {
       user: {
         id: persona.user.id,
         role: persona.user.role,
+        // Si es profesional, el front necesita su id de Professional para
+        // acotar dashboard/agendas a lo propio. Para el resto va null.
+        professionalId: persona.professional?.id ?? null,
         person: {
           name: persona.name,
           email: persona.email
@@ -138,7 +141,7 @@ export const perfil = async (req, res) => {
   try {
     const persona = await prisma.people.findFirst({
       where: { user: { id: req.user.id } },
-      include: { user: true }
+      include: { user: true, professional: { select: { id: true } } }
     });
 
     if (!persona) {
@@ -149,6 +152,7 @@ export const perfil = async (req, res) => {
       user: {
         id: persona.user.id,
         role: persona.user.role,
+        professionalId: persona.professional?.id ?? null,
         person: {
           name: persona.name,
           email: persona.email

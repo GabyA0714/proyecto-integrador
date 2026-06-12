@@ -10,6 +10,13 @@ export const obtenerMiPerfil = async (req, res) => {
     });
     if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
 
+    // Si la persona también tiene ficha de profesional, la devolvemos para que
+    // pueda editar su rol/especialidad y bio desde "Mi Perfil".
+    const profesional = await prisma.professional.findUnique({
+      where: { peopleId: usuario.peopleId },
+      select: { id: true, specialty: true, bio: true, active: true },
+    });
+
     res.json({
       id: usuario.id,
       role: usuario.role,
@@ -21,6 +28,7 @@ export const obtenerMiPerfil = async (req, res) => {
         document: usuario.person.document,
         documentType: usuario.person.documentType,
       },
+      professional: profesional || null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -117,7 +125,7 @@ export const obtenerUsuarioPorId = async (req, res) => {
 
 export const crearUsuario = async (req, res) => {
   try {
-    const { nombre, email, document, documentType, phone, password, rol, cuilCuit, confirmLink } = req.body;
+    const { nombre, email, document, documentType, phone, password, rol, cuilCuit, confirmLink, specialty, bio } = req.body;
 
     // 1) El email es la credencial de login: no puede repetirse entre usuarios.
     //    (Sí puede coincidir con el de un paciente que no tiene login.)
@@ -129,6 +137,7 @@ export const crearUsuario = async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
+    const esProfesional = rol === 'PROFESSIONAL';
 
     // 2) Si se cargó un documento real, la identidad es ese documento: buscamos
     //    si ya existe la persona para darle login en vez de duplicarla.
@@ -159,10 +168,19 @@ export const crearUsuario = async (req, res) => {
             },
           });
         }
-        // Confirmado: se crea el usuario sobre la persona existente.
-        const user = await prisma.user.create({
-          data: { peopleId: existente.id, passwordHash: hash, role: rol },
-          include: { person: true },
+        // Confirmado: se crea el usuario sobre la persona existente. Si el rol es
+        // PROFESSIONAL y aún no tiene ficha, la creamos en la misma transacción.
+        const user = await prisma.$transaction(async (tx) => {
+          const u = await tx.user.create({
+            data: { peopleId: existente.id, passwordHash: hash, role: rol },
+            include: { person: true },
+          });
+          if (esProfesional && !existente.professional) {
+            await tx.professional.create({
+              data: { peopleId: existente.id, specialty: specialty || "", bio: bio || null },
+            });
+          }
+          return u;
         });
         return res.status(201).json({
           id: user.id, nombre: user.person.name, email: user.person.email, rol: user.role,
@@ -170,23 +188,32 @@ export const crearUsuario = async (req, res) => {
       }
     }
 
-    // 3) Persona nueva (o sin documento cargado): se crea people + user.
-    const nuevaPersona = await prisma.people.create({
-      data: {
-        name: nombre,
-        email: email,
-        document: docReal ? document.trim() : "00000000",
-        documentType: documentType || "DNI",
-        phone: phone || "",
-        cuilCuit: cuilCuit ?? "",
-        user: {
-          create: {
-            passwordHash: hash,
-            role: rol
+    // 3) Persona nueva (o sin documento cargado): se crea people + user. Si el rol
+    //    es PROFESSIONAL, creamos también su ficha en la misma transacción.
+    const nuevaPersona = await prisma.$transaction(async (tx) => {
+      const persona = await tx.people.create({
+        data: {
+          name: nombre,
+          email: email,
+          document: docReal ? document.trim() : "00000000",
+          documentType: documentType || "DNI",
+          phone: phone || "",
+          cuilCuit: cuilCuit ?? "",
+          user: {
+            create: {
+              passwordHash: hash,
+              role: rol
+            }
           }
-        }
-      },
-      include: { user: true }
+        },
+        include: { user: true }
+      });
+      if (esProfesional) {
+        await tx.professional.create({
+          data: { peopleId: persona.id, specialty: specialty || "", bio: bio || null },
+        });
+      }
+      return persona;
     });
 
     res.status(201).json({
@@ -203,32 +230,64 @@ export const crearUsuario = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, email, password, rol, active } = req.body;
+    const { nombre, email, password, rol, active, specialty, bio } = req.body;
 
-    let userData = { 
+    const userData = {
       ...(rol !== undefined && { role: rol }),
-      ...(active !== undefined && { active }), 
+      ...(active !== undefined && { active }),
     };
-    
     if (password) {
       userData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const usuarioActualizado = await prisma.user.update({
-      where: { id: String(id) },
-      data: userData,
-      include: { person: true }
-    });
-
-    if (nombre || email) {
-      await prisma.people.update({
-        where: { id: usuarioActualizado.peopleId },
-        data: {
-          name: nombre || usuarioActualizado.person.name,
-          email: email || usuarioActualizado.person.email
-        }
+    await prisma.$transaction(async (tx) => {
+      const usuarioActualizado = await tx.user.update({
+        where: { id: String(id) },
+        data: userData,
+        include: { person: true },
       });
-    }
+
+      if (nombre || email) {
+        await tx.people.update({
+          where: { id: usuarioActualizado.peopleId },
+          data: {
+            name: nombre || usuarioActualizado.person.name,
+            email: email || usuarioActualizado.person.email,
+          },
+        });
+      }
+
+      // Coherencia rol <-> ficha de profesional. El rol es el acceso; la ficha
+      // son los datos. Tener ficha de profesional ⇒ rol Profesional o Admin.
+      if (rol !== undefined) {
+        const ficha = await tx.professional.findUnique({
+          where: { peopleId: usuarioActualizado.peopleId },
+        });
+
+        if (rol === 'PROFESSIONAL') {
+          // El rol Profesional exige una ficha vigente: la creamos si no existe
+          // o la reactivamos si estaba archivada. Así no queda un profesional
+          // sin ficha (que rompía el scoping de su agenda/turnos).
+          if (!ficha) {
+            await tx.professional.create({
+              data: {
+                peopleId: usuarioActualizado.peopleId,
+                specialty: specialty || '',
+                bio: bio || null,
+              },
+            });
+          } else if (ficha.active === false) {
+            await tx.professional.update({ where: { id: ficha.id }, data: { active: true } });
+          }
+        } else if (rol !== 'ADMIN' && ficha && ficha.active !== false) {
+          // Baja a un rol sin ficha (Recepción/Paciente): la ficha pasa a
+          // histórico (soft-delete), no se borra. Sus turnos pasados quedan.
+          await tx.professional.update({ where: { id: ficha.id }, data: { active: false } });
+        }
+        // ADMIN: si ya tiene ficha la conservamos como está; si no, no creamos
+        // una (un admin sin ficha es válido).
+      }
+    });
 
     res.json({ mensaje: "Usuario actualizado correctamente" });
   } catch (error) {
@@ -324,6 +383,45 @@ export const activarUsuario = async (req, res) => {
     });
 
     res.json({ mensaje: "Usuario activado correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const verificarDocumento = async (req, res) => {
+  try {
+    const { documentType, document } = req.query;
+    const doc = (document || "").trim();
+    // Sin documento (o el placeholder) no hay a quién buscar: alta normal.
+    if (!doc || doc === "00000000") {
+      return res.json({ existe: false });
+    }
+    const tipo = documentType || "DNI";
+    const persona = await prisma.people.findFirst({
+      where: { documentType: tipo, document: doc },
+      include: { user: true, patient: true, professional: true },
+    });
+    if (!persona) {
+      return res.json({ existe: false });
+    }
+    // Devolvemos quién es y qué fichas tiene, SIN crear nada. El front decide
+    // si precargar datos (persona sin cuenta) o avisar (ya tiene usuario).
+    return res.json({
+      existe: true,
+      tieneUser: !!persona.user,
+      esPaciente: !!persona.patient,
+      esProfesional: !!persona.professional,
+      persona: {
+        id: persona.id,
+        name: persona.name,
+        email: persona.email,
+        phone: persona.phone,
+        documentType: persona.documentType,
+        document: persona.document,
+        specialty: persona.professional?.specialty || "",
+        bio: persona.professional?.bio || "",
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

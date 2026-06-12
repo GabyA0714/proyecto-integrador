@@ -4,6 +4,7 @@ import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { TimeInput24 } from "./ui/TimeInput24";
 import { useBanner } from "./ui/Banner";
+import { useAuth } from "../hooks/useAuth";
 
 const DIAS_SEMANA = [
   { value: 0, label: "Domingo" },
@@ -56,6 +57,9 @@ const cajaError = {
 
 export const GestionHorariosRecurrentes = ({ professionalId, token }) => {
   const banner = useBanner();
+  const { user } = useAuth();
+  // Recepción solo mira los horarios; Admin y el propio profesional editan.
+  const editable = ["ADMIN", "PROFESSIONAL"].includes(user?.role);
   const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
   const [horarios, setHorarios] = useState([]);
@@ -213,13 +217,15 @@ export const GestionHorariosRecurrentes = ({ professionalId, token }) => {
         }}
       >
         <h3 style={{ color: "#475569", margin: 0 }}>Horarios recurrentes</h3>
-        <Button
-          onClick={abrirCrear}
-          disabled={accionando}
-          style={{ flex: "0 0 auto", fontSize: "13px", padding: "6px 12px" }}
-        >
-          + Agregar
-        </Button>
+        {editable && (
+          <Button
+            onClick={abrirCrear}
+            disabled={accionando}
+            style={{ flex: "0 0 auto", fontSize: "13px", padding: "6px 12px" }}
+          >
+            + Agregar
+          </Button>
+        )}
       </div>
 
       {error && <div style={cajaError}>{error}</div>}
@@ -236,23 +242,27 @@ export const GestionHorariosRecurrentes = ({ professionalId, token }) => {
               <Td>{formatHora(h.startTime)}</Td>
               <Td>{formatHora(h.endTime)}</Td>
               <Td>
-                <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-                  <Button
-                    style={{ flex: "0 0 auto", padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
-                    onClick={() => abrirEditar(h)}
-                    disabled={accionando}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant="danger"
-                    style={{ flex: "0 0 auto", padding: "6px 12px", fontSize: "12px", backgroundColor: "#d32f2f", color: "#fff" }}
-                    onClick={() => setAEliminar({ id: h.id, label: labelDia(h.dayOfWeek) })}
-                    disabled={accionando}
-                  >
-                    Eliminar
-                  </Button>
-                </div>
+                {editable ? (
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                    <Button
+                      style={{ flex: "0 0 auto", padding: "6px 12px", fontSize: "12px", backgroundColor: "#64748b" }}
+                      onClick={() => abrirEditar(h)}
+                      disabled={accionando}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="danger"
+                      style={{ flex: "0 0 auto", padding: "6px 12px", fontSize: "12px", backgroundColor: "#d32f2f", color: "#fff" }}
+                      onClick={() => setAEliminar({ id: h.id, label: labelDia(h.dayOfWeek) })}
+                      disabled={accionando}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                ) : (
+                  <span style={{ color: "#94a3b8" }}>—</span>
+                )}
               </Td>
             </Tr>
           ))}
