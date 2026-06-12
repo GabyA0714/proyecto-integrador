@@ -27,8 +27,8 @@ const FichaPacienteAdmin = () => {
   const cargarDatos = async () => {
     try {
       const [dataPaciente, dataTurnos] = await Promise.all([
-        obtenerPacientePorId(id, token),
-        obtenerHistorialTurnos(id, token),
+        obtenerPacientePorId(id),
+        obtenerHistorialTurnos(id),
       ]);
       setPaciente(dataPaciente);
       setTurnos(dataTurnos);
@@ -37,7 +37,7 @@ const FichaPacienteAdmin = () => {
       // 403 no tumbe la carga de la ficha completa.
       if (puedeVerPagos) {
         try {
-          setPagos(await obtenerHistorialPagos(id, token));
+          setPagos(await obtenerHistorialPagos(id));
         } catch {
           setPagos([]);
         }
@@ -216,9 +216,13 @@ const FichaPacienteAdmin = () => {
                 {p.appointment?.professionalService?.service?.name || "—"}
               </Td>
 
-              <Td>{p.paymentMethod}</Td>
+              {/* CORRECCIÓN: el backend devuelve los campos `method` y `type`
+                  (Prisma usa el nombre del campo, no el de la columna).
+                  Antes se leía p.paymentMethod / p.paymentType -> undefined,
+                  y las columnas Método/Tipo salían en blanco. */}
+              <Td>{p.method}</Td>
 
-              <Td>{p.isRefund ? "Devolución" : p.paymentType}</Td>
+              <Td>{p.isRefund ? "Devolución" : p.type}</Td>
 
               <Td
                 style={{

@@ -1,88 +1,66 @@
-import axios from "axios";
-
-const API = `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/services`;
+import client from "./client";
 
 // SERVICIOS
 
-export const obtenerServicios = async (token, active) => {
-  const res = await axios.get(API, {
-    headers: { Authorization: `Bearer ${token}` },
+export const obtenerServicios = async (active) => {
+  const res = await client.get("/services", {
     params: active !== undefined ? { active } : undefined,
   });
   return res.data;
 };
 
-export const obtenerServicioPorId = async (id, token) => {
-  const res = await axios.get(`${API}/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const obtenerServicioPorId = async (id) => {
+  const res = await client.get(`/services/${id}`);
   return res.data;
 };
 
-export const crearServicio = async (data, token) => {
-  const res = await axios.post(API, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const crearServicio = async (data) => {
+  const res = await client.post("/services", data);
   return res.data;
 };
 
-export const actualizarServicio = async (id, data, token) => {
-  const res = await axios.patch(`${API}/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const actualizarServicio = async (id, data) => {
+  const res = await client.patch(`/services/${id}`, data);
   return res.data;
 };
 
-export const desactivarServicio = async (id, token) => {
-  const res = await axios.patch(
-    `${API}/${id}/deactivate`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
+export const desactivarServicio = async (id) => {
+  const res = await client.patch(`/services/${id}/deactivate`, {});
   return res.data;
 };
 
 // CATEGORÍAS
 
-export const obtenerCategorias = async (token) => {
-  const res = await axios.get(`${API}/categories`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const obtenerCategorias = async () => {
+  const res = await client.get("/services/categories");
   return res.data;
 };
-export const crearCategoria = async (data, token) => {
-  const res = await axios.post(`${API}/categories`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+
+export const crearCategoria = async (data) => {
+  const res = await client.post("/services/categories", data);
   return res.data;
 };
-export const actualizarCategoria = async (id, data, token) => {
-  const res = await axios.patch(`${API}/categories/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+
+export const actualizarCategoria = async (id, data) => {
+  const res = await client.patch(`/services/categories/${id}`, data);
   return res.data;
 };
 
 // PROFESSIONAL SERVICES
 
-export const obtenerServiciosDeProfesional = async (professionalId, token) => {
-  const res = await axios.get(
-    `${API}/professional-services/by-professional/${professionalId}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+export const obtenerServiciosDeProfesional = async (professionalId) => {
+  const res = await client.get(
+    `/services/professional-services/by-professional/${professionalId}`,
   );
   return res.data;
 };
 
-export const crearProfessionalService = async (data, token) => {
-  const res = await axios.post(`${API}/professional-services`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const crearProfessionalService = async (data) => {
+  const res = await client.post("/services/professional-services", data);
   return res.data;
 };
 
-export const actualizarProfessionalService = async (id, data, token) => {
-  const res = await axios.patch(`${API}/professional-services/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const actualizarProfessionalService = async (id, data) => {
+  const res = await client.patch(`/services/professional-services/${id}`, data);
   return res.data;
 };

@@ -50,8 +50,8 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
     setError("");
     try {
       const [ps, cat] = await Promise.all([
-        obtenerServiciosDeProfesional(professionalId, token),
-        obtenerServicios(token, true),
+        obtenerServiciosDeProfesional(professionalId),
+        obtenerServicios(true),
       ]);
       setServicios(ps);
       setCatalogo(cat);
@@ -123,7 +123,6 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
         await actualizarProfessionalService(
           psEditando.id,
           { price: Number(form.price), durationMinutes: Number(form.durationMinutes) },
-          token,
         );
       } else {
         await crearProfessionalService(
@@ -133,7 +132,6 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
             price: Number(form.price),
             durationMinutes: Number(form.durationMinutes),
           },
-          token,
         );
       }
       setModalAbierto(false);
@@ -158,7 +156,7 @@ export const GestionServiciosProfesional = ({ professionalId, token }) => {
   const cambiarEstado = async (ps, activar) => {
     setError("");
     try {
-      await actualizarProfessionalService(ps.id, { active: activar }, token);
+      await actualizarProfessionalService(ps.id, { active: activar });
       setPsADesactivar(null);
       banner[activar ? "success" : "warning"](
         activar ? "Servicio reactivado" : "Servicio desactivado",

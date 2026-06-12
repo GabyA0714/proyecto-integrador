@@ -23,6 +23,9 @@ const router = express.Router();
  *       401:
  *         description: Token inválido o ausente
  */
-router.get("/", verificarToken, autorizarRoles("ADMIN"), getDashboard);
+// CORRECCIÓN: autorizarRoles espera un ARRAY, no un string.
+// Antes: autorizarRoles("ADMIN") -> funcionaba de casualidad ("ADMIN".includes("ADMIN")),
+// pero un string hace match por substring y es frágil.
+router.get("/", verificarToken, autorizarRoles(["ADMIN"]), getDashboard);
 
 export default router;

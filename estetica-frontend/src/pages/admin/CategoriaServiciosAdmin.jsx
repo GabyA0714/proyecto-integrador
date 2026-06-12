@@ -42,7 +42,7 @@ const CategoriaServiciosAdmin = () => {
   // OBTENER CATEGORÍAS
   const cargarCategorias = async () => {
     try {
-      const data = await obtenerCategorias(token);
+      const data = await obtenerCategorias();
       setCategorias(data);
     } catch (err) {
       setError(mensajeDeError(err));
@@ -87,13 +87,13 @@ const CategoriaServiciosAdmin = () => {
       let payload;
       if (modoEdicion) {
         payload = { name: formData.name.trim() };
-        await actualizarCategoria(categoriaEditandoId, payload, token);
+        await actualizarCategoria(categoriaEditandoId, payload);
       } else {
         // El orden se asigna automáticamente al final (no se pide a mano).
         const siguienteOrden =
           categorias.reduce((max, c) => Math.max(max, c.displayOrder || 0), 0) + 1;
         payload = { name: formData.name.trim(), displayOrder: siguienteOrden };
-        await crearCategoria(payload, token);
+        await crearCategoria(payload);
       }
       setModalFormAbierto(false);
       banner.success(modoEdicion ? "Categoría actualizada" : "Categoría creada", {
@@ -124,7 +124,7 @@ const CategoriaServiciosAdmin = () => {
         if (c.displayOrder !== ordenNuevo) cambios.push({ id: c.id, displayOrder: ordenNuevo });
       });
       for (const c of cambios) {
-        await actualizarCategoria(c.id, { displayOrder: c.displayOrder }, token);
+        await actualizarCategoria(c.id, { displayOrder: c.displayOrder });
       }
       // Reflejamos el nuevo orden en pantalla
       setCategorias(nuevo.map((c, i) => ({ ...c, displayOrder: i + 1 })));

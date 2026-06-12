@@ -5,6 +5,7 @@ import { useBanner } from "../../components/ui/Banner";
 import { GestionServiciosProfesional } from "../../components/GestionServiciosProfesional";
 import { GestionHorariosRecurrentes } from "../../components/GestionHorariosRecurrentes";
 import { PageHeader } from "../../components/ui/PageHeader";
+import client, { mensajeDeError } from "../../api/client";
 
 const PURPLE = "#6b21a8";
 const BORDER = "#cbd5e1";
@@ -19,6 +20,7 @@ const ROLES = {
   PATIENT:      { label: "Paciente",      fg: "#854d0e" },
 };
 
+
 const labelStyle = { display: "block", marginBottom: 6, fontSize: 13, color: "#555", fontWeight: "bold" };
 const errBox = { padding: "10px 12px", borderRadius: 8, backgroundColor: "#fef2f2", color: "#c62828", fontSize: 13, fontWeight: "bold", marginBottom: 14 };
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 12px", border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 14 };
@@ -26,8 +28,6 @@ const inputStyle = { width: "100%", boxSizing: "border-box", padding: "9px 12px"
 const MiPerfil = () => {
   const { user, token } = useAuth();
   const banner = useBanner();
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-  const authHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
   const [perfil, setPerfil] = useState(null);   // { person, role, professional }
   const [error, setError] = useState("");
@@ -43,12 +43,10 @@ const MiPerfil = () => {
     if (!token) return;
     (async () => {
       try {
-        const res = await fetch(`${apiUrl}/users/me`, { headers: authHeaders });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || data.error || "No se pudo cargar el perfil");
+        const { data } = await client.get("/users/me");
         setPerfil(data);
       } catch (err) {
-        setError(err.message);
+        setError(mensajeDeError(err));
       } finally {
         setCargando(false);
       }
@@ -68,16 +66,14 @@ const MiPerfil = () => {
     }
     setCargandoPass(true);
     try {
-      const res = await fetch(`${apiUrl}/users/${user.id}/password`, {
-        method: "PATCH", headers: authHeaders,
-        body: JSON.stringify({ passwordActual: formData.passwordActual, passwordNueva: formData.passwordNueva }),
+      await client.patch(`/users/${user.id}/password`, {
+        passwordActual: formData.passwordActual,
+        passwordNueva: formData.passwordNueva,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.mensaje || data.error || "Error al cambiar la contraseña");
       banner.success("Contraseña actualizada");
       setFormData({ passwordActual: "", passwordNueva: "", confirmarPassword: "" });
     } catch (err) {
-      setErrorPass(err.message);
+      setErrorPass(mensajeDeError(err));
     } finally {
       setCargandoPass(false);
     }

@@ -31,7 +31,7 @@ const PacientesAdmin = () => {
   const cargarPacientes = async (search = "") => {
     try {
       setError("");
-      const data = await obtenerPacientes(token, search);
+      const data = await obtenerPacientes(search);
       setPacientes(data);
     } catch (err) {
       setError(err.message);

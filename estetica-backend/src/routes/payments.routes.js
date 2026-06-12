@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import verificarToken from '../middleware/verificarToken.js';
+import autorizarRoles from '../middleware/autorizarRoles.js';
 import {
   crearPago,
   obtenerPagosPorTurno,
@@ -10,7 +11,13 @@ import {
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
+// Todas las rutas requieren autenticación.
+// CORRECCIÓN: antes ninguna ruta tenía control de rol. Cualquier usuario
+// autenticado podía ver el historial financiero global o eliminar pagos.
+// Ahora cada ruta declara explícitamente qué roles la pueden usar.
+//   - Registrar / ver / reembolsar pagos -> ADMIN, RECEPTIONIST (recepción cobra)
+//   - Historial financiero global        -> ADMIN
+//   - Eliminar un pago                    -> ADMIN
 router.use(verificarToken);
 
 // GET    /api/payments/historial        Historial global con filtros
@@ -18,7 +25,7 @@ router.use(verificarToken);
  * @swagger
  * /api/payments/historial:
  *   get:
- *     summary: Obtener historial global de pagos con filtros
+ *     summary: Obtener historial global de pagos con filtros (solo ADMIN)
  *     tags:
  *       - Pagos
  *     security:
@@ -61,15 +68,17 @@ router.use(verificarToken);
  *         description: Historial de pagos obtenido correctamente
  *       401:
  *         description: Token inválido o ausente
+ *       403:
+ *         description: Acceso denegado (rol sin permiso)
  */
-router.get('/historial', obtenerHistorialPagos);
+router.get('/historial', autorizarRoles(['ADMIN']), obtenerHistorialPagos);
 
 // POST   /api/payments/:appointmentId   Registrar un pago
 /**
  * @swagger
  * /api/payments/{appointmentId}:
  *   post:
- *     summary: Registrar un pago para un turno
+ *     summary: Registrar un pago para un turno (ADMIN, RECEPTIONIST)
  *     tags:
  *       - Pagos
  *     security:
@@ -111,15 +120,17 @@ router.get('/historial', obtenerHistorialPagos);
  *         description: Turno no encontrado
  *       401:
  *         description: Token inválido o ausente
+ *       403:
+ *         description: Acceso denegado (rol sin permiso)
  */
-router.post('/:appointmentId', crearPago);
+router.post('/:appointmentId', autorizarRoles(['ADMIN', 'RECEPTIONIST']), crearPago);
 
 // GET    /api/payments/:appointmentId   Ver pagos + resumen de un turno
 /**
  * @swagger
  * /api/payments/{appointmentId}:
  *   get:
- *     summary: Obtener pagos y resumen de un turno
+ *     summary: Obtener pagos y resumen de un turno (ADMIN, RECEPTIONIST)
  *     tags:
  *       - Pagos
  *     security:
@@ -137,15 +148,17 @@ router.post('/:appointmentId', crearPago);
  *         description: Turno no encontrado
  *       401:
  *         description: Token inválido o ausente
+ *       403:
+ *         description: Acceso denegado (rol sin permiso)
  */
-router.get('/:appointmentId', obtenerPagosPorTurno);
+router.get('/:appointmentId', autorizarRoles(['ADMIN', 'RECEPTIONIST']), obtenerPagosPorTurno);
 
 // POST   /api/payments/:appointmentId/refund → Registrar un reembolso
 /**
  * @swagger
  * /api/payments/{appointmentId}/refund:
  *   post:
- *     summary: Registrar un reembolso para un turno
+ *     summary: Registrar un reembolso para un turno (ADMIN, RECEPTIONIST)
  *     tags:
  *       - Pagos
  *     security:
@@ -180,15 +193,17 @@ router.get('/:appointmentId', obtenerPagosPorTurno);
  *         description: Turno no encontrado
  *       401:
  *         description: Token inválido o ausente
+ *       403:
+ *         description: Acceso denegado (rol sin permiso)
  */
-router.post('/:appointmentId/refund', registrarReembolso);
+router.post('/:appointmentId/refund', autorizarRoles(['ADMIN', 'RECEPTIONIST']), registrarReembolso);
 
 // DELETE /api/payments/:id/delete      Eliminar un pago
 /**
  * @swagger
  * /api/payments/{id}/delete:
  *   delete:
- *     summary: Eliminar un pago
+ *     summary: Eliminar un pago (solo ADMIN)
  *     tags:
  *       - Pagos
  *     security:
@@ -206,7 +221,9 @@ router.post('/:appointmentId/refund', registrarReembolso);
  *         description: Pago no encontrado
  *       401:
  *         description: Token inválido o ausente
+ *       403:
+ *         description: Acceso denegado (rol sin permiso)
  */
-router.delete('/:id/delete', eliminarPago);
+router.delete('/:id/delete', autorizarRoles(['ADMIN']), eliminarPago);
 
 export default router;
