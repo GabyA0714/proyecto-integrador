@@ -80,8 +80,8 @@ export const PacienteFormModal = ({ isOpen, onClose, token, paciente = null, ini
     try {
       const payload = confirmLink ? { ...form, confirmLink: true } : form;
       const guardado = modoEdicion
-        ? await actualizarPaciente(paciente.id, payload, token)
-        : await crearPaciente(payload, token);
+        ? await actualizarPaciente(paciente.id, payload)
+        : await crearPaciente(payload);
       trasGuardar(guardado);
     } catch (err) {
       const data = err.response?.data;

@@ -57,7 +57,7 @@ const ServiciosAdmin = () => {
 
   const cargarServicios = async () => {
     try {
-      const data = await obtenerServicios(token);
+      const data = await obtenerServicios();
       setServicios(ordenarPorEstado(data));
     } catch (err) {
       setError(err.message);
@@ -70,7 +70,7 @@ const ServiciosAdmin = () => {
 
   const cargarCategorias = async () => {
     try {
-      const data = await obtenerCategorias(token);
+      const data = await obtenerCategorias();
       setCategorias(data);
     } catch (err) {
       console.error(err);
@@ -136,9 +136,9 @@ const ServiciosAdmin = () => {
       };
 
       if (modoEdicion) {
-        await actualizarServicio(servicioEditandoId, payload, token);
+        await actualizarServicio(servicioEditandoId, payload);
       } else {
-        await crearServicio(payload, token);
+        await crearServicio(payload);
       }
       setModalFormAbierto(false);
 
@@ -171,7 +171,7 @@ const ServiciosAdmin = () => {
 
   const ejecutarEliminacion = async () => {
     try {
-      await desactivarServicio(servicioSeleccionado.id, token);
+      await desactivarServicio(servicioSeleccionado.id);
 
       setModalEliminarAbierto(false);
       banner.warning("Servicio desactivado", { details: [["Servicio", servicioSeleccionado.name]] });
@@ -184,7 +184,7 @@ const ServiciosAdmin = () => {
   // REACTIVAR
   const reactivarServicio = async (servicio) => {
     try {
-      await actualizarServicio(servicio.id, { active: true }, token);
+      await actualizarServicio(servicio.id, { active: true });
       banner.success("Servicio reactivado", { details: [["Servicio", servicio.name]] });
       cargarServicios();
     } catch (err) {

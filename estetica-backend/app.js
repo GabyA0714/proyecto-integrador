@@ -11,6 +11,7 @@ import reportsRoutes from './src/routes/reports.routes.js';
 import paymentsRoutes from './src/routes/payments.routes.js';
 import iniciarRecordatorios from './src/utils/reminders.js';
 import remindersRoutes from './src/routes/reminders.routes.js';
+import errorHandler from './src/middleware/errorHandler.js';
 
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./src/config/swagger.js";
@@ -57,18 +58,17 @@ app.get('/', (req, res) => {
   res.send('API de Espacio Senda funcionando correctamente');
 });
 
+// --- 404 ---
 app.use((req, res) => {
   res.status(404).json({
     error: 'Ruta no encontrada'
   });
 });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Error interno del servidor'
-  });
-});
+// --- MANEJADOR DE ERRORES CENTRAL ---
+// Debe ir SIEMPRE al final. Captura todo lo que los controllers reenvían
+// vía next() (gracias a asyncHandler) y mapea errores de Prisma.
+app.use(errorHandler);
 
 // --- SERVIDOR ---
 const PORT = process.env.PORT || 3000;
@@ -78,7 +78,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
   });
-  
+
   iniciarRecordatorios();
 }
 
