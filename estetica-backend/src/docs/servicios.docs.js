@@ -171,6 +171,7 @@
  *   patch:
  *     summary: Actualizar precio o duración de un servicio por profesiona
  *     description: Disponible para ADMIN y PROFESSIONAL
+ *     tags:
  *       - Servicios Profesionales
  *     security:
  *       - bearerAuth: []
