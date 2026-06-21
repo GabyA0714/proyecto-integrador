@@ -2,7 +2,7 @@
 
 .sidebar {
   width: 220px;
-  height: 100vh;
+  height: 100dvh;
   background: #1f2937;
   color: white;
   padding: 20px;
@@ -14,6 +14,7 @@
   flex-direction: column;
   box-sizing: border-box;
   transition: transform 0.25s ease;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 }
 
 .sidebar.is-open {
