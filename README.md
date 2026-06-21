@@ -1,52 +1,67 @@
 # Espacio Senda — Sistema de Gestión de Turnos
 
-Sistema de gestión de turnos para un centro de salud, desarrollado como Proyecto Integrador de 3er año.
+Aplicación web para la gestión de turnos de un centro de salud y estética. Permite administrar pacientes, profesionales, servicios, agendas y turnos; registrar pagos y reembolsos; generar reportes; sincronizar los turnos con Google Calendar y enviar recordatorios automáticos por correo.
 
-## Tecnologías utilizadas
+El proyecto está dividido en dos aplicaciones independientes que se comunican mediante una API REST sobre HTTP (JSON):
 
-- **Frontend:** React + Tailwind CSS
-- **Backend:** Node.js + Express
-- **Base de datos:** PostgreSQL
-- **ORM:** Prisma
-- **Control de versiones:** Git & GitHub
+- **`estetica-backend`** — API REST en Node.js + Express, con Prisma ORM sobre PostgreSQL.
+- **`estetica-frontend`** — SPA en React (Vite).
 
-  
-## Estructura del proyecto
+## Stack tecnológico
+
+**Backend**
+- Node.js + Express 5 (API REST)
+- PostgreSQL + Prisma ORM 5 (acceso a datos y migraciones)
+- JSON Web Token (autenticación) y bcrypt (cifrado de contraseñas)
+- express-rate-limit (protección anti fuerza bruta)
+- googleapis (sincronización con Google Calendar)
+- Nodemailer / Brevo (envío de correos)
+- node-cron (tareas programadas: recordatorios y reintentos de sincronización)
+- Swagger (swagger-jsdoc + swagger-ui-express) para documentar la API
+- Jest + Supertest (pruebas unitarias y de integración)
+
+**Frontend**
+- React 19 (SPA)
+- React Router DOM 7 (ruteo)
+- axios (cliente HTTP hacia la API)
+- Vite 8 (empaquetado y servidor de desarrollo)
+- CSS plano con variables nativas y un theme de colores centralizado
+
+## Estructura del repositorio
+
 ```
-/
-├── estetica-backend/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   ├── seed.js
-│   │   ├── seed2.js
-│   │   ├── reset-all.js
-│   │   └── migrations/
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   ├── config/
-│   │   └── utils/
-│   └── app.js
-│
-└── estetica-frontend/
-    ├── src/
-    │   ├── pages/
-    │   ├── components/
-    │   ├── hooks/
-    │   └── api/
-    └── index.html
+estetica-backend/
+  prisma/             Esquema (schema.prisma), migraciones y datos de prueba (seed.js)
+  src/
+    routes/           Definición de los endpoints
+    controllers/      Lógica de cada endpoint
+    services/         Lógica de negocio compleja (disponibilidad, turnos, sincronización)
+    middleware/       Autenticación (verificarToken) y autorización (autorizarRoles)
+    utils/            Zona horaria, normalización de teléfonos, recordatorios, sincronización
+    config/           Cliente Prisma, Swagger, Google, mailer
+    docs/             Documentación Swagger de la API
+  tests/unit/         Pruebas unitarias
+  tests/integration/  Pruebas de integración
+  app.js              Punto de entrada
+
+estetica-frontend/
+  src/
+    pages/            Pantallas (Turnos, Pacientes, Profesionales, Servicios, Reportes, etc.)
+    components/       Componentes reutilizables
+    api/              Cliente axios centralizado
+    hooks/            Hooks personalizados (contexto de autenticación)
+    utils/            Formato de moneda, fechas y teléfonos
+    constants/        Estados de turno, pago y sincronización
+    theme/            Estilos base y paleta de colores
 ```
 
 ## Requisitos previos
 
-Antes de instalar el proyecto, asegurate de tener instalado:
+- Node.js 18 o superior y npm
+- PostgreSQL 14 o superior (local o en la nube, por ejemplo Supabase o Neon)
+- Git
 
-- [Node.js](https://nodejs.org/) (v18 o superior)
-- [PostgreSQL](https://www.postgresql.org/download/) (v15 o superior)
-- [Git](https://git-scm.com/)
-
-## Instalación
+## Instalación y ejecución
 
 ### 1. Clonar el repositorio
 
@@ -59,143 +74,148 @@ cd proyecto-integrador
 
 ### 2. Configurar la base de datos
 
-Abrí pgAdmin o psql y creá la base de datos:
+Crear la base de datos desde pgAdmin o psql (omitir este paso si se usa una base administrada en la nube como Supabase o Neon, donde la base ya existe):
 
 ```sql
 CREATE DATABASE espacio_senda;
 ```
 
-### 3. Configurar el Backend
+Luego cargar la cadena de conexión en `DATABASE_URL` (y `DIRECT_URL` si corresponde) dentro del `.env` del backend.
+
+### 3. Backend
 
 ```bash
 cd estetica-backend
 npm install
+# Crear el archivo .env (ver sección "Variables de entorno"). No se sube a Git.
+npx prisma generate        # Genera el cliente de Prisma
+npx prisma migrate deploy  # Crea las tablas en la base
+node prisma/seed.js        # Carga los datos de prueba
+node prisma/seed2.js       # Carga mas datos de prueba
+npm run dev                # Levanta el servidor (http://localhost:3000)
 ```
 
-> **Nota:** Si `npm install` falla con errores de permisos o paquetes no encontrados, ejecutá como Administrador:
-> ```bash
-> Remove-Item -Recurse -Force node_modules
-> Remove-Item -Force package-lock.json
-> npm install
-> ```
- 
+### 4. Frontend
 
-Creá el archivo `.env` dentro de la carpeta `estetica-backend/`:
+```bash
+cd estetica-frontend
+npm install
+# Crear el archivo .env con:  VITE_API_URL=http://localhost:3000/api
+npm run dev                # Levanta la SPA (http://localhost:5173)
+```
 
-```env
-DATABASE_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
-DIRECT_URL="postgresql://postgres:TU_CONTRASEÑA@localhost:5432/espacio_senda"
-JWT_SECRET="tu_clave_secreta_aqui"
+## Variables de entorno (backend)
+
+Solo `DATABASE_URL` y `JWT_SECRET` son imprescindibles para que la aplicación arranque. El resto habilita el correo y la sincronización con Google Calendar; sin ellas, el sistema funciona igual: la sincronización queda en estado `PENDING` y el envío de correos se desactiva.
+
+Cuando la base se aloja en Supabase con *connection pooling*, `DATABASE_URL` apunta al pooler (puerto 6543) y `DIRECT_URL` a la conexión directa (puerto 5432), necesaria para aplicar migraciones.
+
+```dotenv
+# Base de datos
+DATABASE_URL="postgresql://usuario:password@host:6543/postgres"   # pooled (Supabase)
+DIRECT_URL="postgresql://usuario:password@host:5432/postgres"     # directa (migraciones)
+
+# Seguridad / app
+JWT_SECRET="clave_secreta"
 PORT=3000
+FRONTEND_URL="http://localhost:5173"
+
+# Correo (recordatorios y recuperación de contraseña)
+EMAIL_USER=
+EMAIL_PASS=
+ALTERNATIVE_MAILER=false        # true para usar Brevo (API HTTP) en lugar de SMTP
+BREVO_API_KEY=
+
+# Google Calendar
+GOOGLE_CLIENT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_CALENDAR_ID=
+GOOGLE_CALENDAR_TZ=America/Argentina/Buenos_Aires
 ```
 
-Ejecutá las migraciones para crear las tablas:
+> Las credenciales no se incluyen en el repositorio (`.env` está excluido por `.gitignore`). Quien continúe el desarrollo debe generar las suyas. Ver la sección **Integraciones externas**.
+
+## Credenciales de prueba
+
+El seed crea un usuario administrador:
+
+- **Email:** `admin@espaciosenda.com`
+- **Contraseña:** `123456`
+
+También crea un usuario de recepción y uno de paciente con la misma contraseña.
+
+## Documentación de la API (Swagger)
+
+Con el backend en ejecución, la documentación interactiva está disponible en:
+
+```
+http://localhost:3000/api/docs
+```
+
+Los endpoints protegidos requieren token JWT: obtenerlo desde `POST /api/auth/login` y cargarlo con el botón **Authorize** (esquema *bearerAuth*) para probar rutas privadas.
+
+### Rutas principales
+
+| Prefijo | Módulo |
+| --- | --- |
+| `/api/auth` | Login, registro de pacientes y recuperación de contraseña |
+| `/api/users` | Gestión de usuarios y roles |
+| `/api/patients` | Pacientes e historial |
+| `/api/professionals` | Profesionales, agendas, disponibilidad y bloqueos |
+| `/api/services` | Categorías, servicios y precio/duración por profesional |
+| `/api/appointments` | Reserva, reprogramación y cambios de estado de turnos |
+| `/api/payments` | Pagos, reembolsos e historial financiero |
+| `/api/reports` | Reportes de ingresos, turnos y servicios |
+| `/api/reminders` | Recordatorios automáticos |
+| `/api/google` | Sincronización con Google Calendar |
+
+## Estados de turno
+
+Los turnos avanzan por los siguientes estados: `PENDING` (Pendiente), `CONFIRMED` (Confirmado), `IN_PROGRESS` (En curso), `COMPLETED` (Completado), `CANCELLED` (Cancelado) y `NO_SHOW` (No asistió). Los estados `CANCELLED` y `NO_SHOW` se consideran cierres del turno.
+
+El estado de pago es independiente del estado del turno: `PENDING`, `PARTIAL`, `COMPLETED`, `REFUNDED`. Al reservar, el precio se congela (`priceSnapshot`) para que cambios posteriores de tarifas no afecten turnos ya registrados.
+
+## Integraciones externas
+
+Estas integraciones requieren credenciales personales que **no** se distribuyen con el proyecto.
+
+### Google Calendar
+
+La sincronización usa una **cuenta de servicio** de Google Cloud (autenticación JWT, no OAuth interactivo). Para configurarla:
+
+1. Crear un proyecto en Google Cloud y habilitar la API de Google Calendar.
+2. Generar una cuenta de servicio y descargar su clave privada.
+3. Compartir el calendario de destino con el email de la cuenta de servicio, con permisos de edición.
+4. Completar `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` y `GOOGLE_CALENDAR_ID`.
+
+Cada entorno escribe en un calendario distinto según `GOOGLE_CALENDAR_ID`. Si una sincronización falla, el turno se guarda igual y queda en estado `PENDING`/`FAILED`; una tarea `node-cron` reintenta los pendientes cada 15 minutos, de modo que un fallo externo nunca bloquea la operación.
+
+### Correo
+
+Por defecto se usa SMTP de Gmail mediante Nodemailer (`EMAIL_USER` y `EMAIL_PASS`, esta última una contraseña de aplicación de Gmail). Como alternativa puede usarse Brevo vía su API HTTP, configurando `ALTERNATIVE_MAILER=true` y `BREVO_API_KEY`.
+
+> **Recordatorios en producción (Render):** el envío por SMTP funciona en el entorno local, pero el plan gratuito de Render bloquea las conexiones SMTP salientes, por lo que Nodemailer no puede enviar desde el backend desplegado. Para habilitar los recordatorios en producción, usar el proveedor alternativo Brevo (`ALTERNATIVE_MAILER=true` + `BREVO_API_KEY`), que opera sobre HTTP y no depende de SMTP.
+
+## Despliegue
+
+El sistema está desplegado con cada capa en un servicio independiente:
+
+- **Frontend:** Vercel
+- **Backend / API:** Render
+- **Base de datos:** Supabase (PostgreSQL administrado en la nube)
+
+> En el plan gratuito de Render, el backend puede tardar entre 30 y 60 segundos en responder la primera petición tras un período de inactividad, ya que el servicio se suspende cuando no recibe tráfico.
+
+## Pruebas
 
 ```bash
-npx prisma migrate dev --name init
+npm run test              # Todas las pruebas
+npm run test:unit         # Solo unitarias (funciones aisladas, sin base de datos)
+npm run test:integration  # Solo de integración (HTTP → middleware → controlador → Prisma → DB)
 ```
 
-Poblá la base de datos con los datos iniciales:
+Las pruebas unitarias cubren la normalización de teléfonos y el manejo de zona horaria. Las de integración cubren la autenticación, el control de autorización por rol y el ciclo CRUD de los módulos centrales.
 
-```bash
-node prisma/seed.js
-node prisma/seed2.js
-```
+## Zona horaria
 
-Para limpiar toda la base de datos:
-
-```bash
-node prisma/reset-data.js
-```
-
-Ver la base de datos visualmente 
-```bash
-cd estetica-backend
-npx prisma studio
-```
-
-Iniciá el servidor:
-
-```bash
-npm start
-```
-
-Tambien podes iniciar el servidor en modo desarrollo:
-
-```bash
-npm run dev
-```
-
-### 4. Configurar el Frontend
-
-```bash
-cd ../estetica-frontend
-npm install
-```
-
-> **Nota:** Si `npm install` falla, aplicá el mismo fix que en el backend (borrar `node_modules` y `package-lock.json` y volver a instalar).
-
-Creá el archivo `.env` dentro de la carpeta `estetica-frontend/`:
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-
-Iniciá el servidor en modo desarrollo:
-
-```bash
-npm run dev
-```
-
-## Uso
-
-Una vez iniciados ambos servidores:
-
-- **Frontend:** http://localhost:5173
-- **Backend:** http://localhost:3000
-
-### Credenciales de acceso por defecto
- 
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Administrador | admin@espaciosenda.com | 123456 |
-| Paciente (prueba) | paciente@prueba.com | 123456 |
- 
-> **Importante:** Estas credenciales son solo para desarrollo. Cambiálas antes de cualquier despliegue en producción.
-
-## Funcionalidades
-
-- Autenticación con roles (Administrador, Recepcionista, Profesional)
-- Gestión de profesionales, pacientes y servicios
-- Reserva y gestión de turnos
-- Registro de pagos y señas
-- Recordatorios automáticos
-- Sincronización con Google Calendar
-
----
- 
-## Comandos frecuentes
- 
-Una guía rápida de qué comando usar en cada situación (todos desde `estetica-backend/`, salvo aclaración):
- 
-| Situación | Comando |
-|---|---|
-| Cambiaste el `schema.prisma` (agregaste/modificaste un campo o tabla) | `npx prisma migrate dev --name descripcion_del_cambio` |
-| Hiciste `git pull` y hay migraciones nuevas de un compañero | `npx prisma migrate deploy` y después `npx prisma generate` |
-| Reinstalaste `node_modules` sin tocar el schema | `npx prisma generate` |
-| La base falla o quedó desincronizada (ej.: error de UUID al crear usuario). ⚠ Borra TODOS los datos y recarga el seed solo | `npx prisma migrate reset` |
-| Querés vaciar los datos sin tocar la estructura, y recargarlos a mano | `node prisma/reset-data.js` y después `node prisma/seed.js` |
-| Se traba con `EPERM ...query_engine-windows.dll.node` (con el backend FRENADO) | `taskkill /F /IM node.exe`, después `Remove-Item -Recurse -Force node_modules\.prisma` (en CMD: `rmdir /S /Q node_modules\.prisma`) y por último `npx prisma generate` |
-| Ver/editar los datos visualmente | `npx prisma studio` |
-| Levantar el backend (desde `estetica-backend/`) | `npm run dev` |
-| Levantar el frontend (desde `estetica-frontend/`) | `npm run dev` |
-
-**Regla de oro:** antes de correr cualquier comando de Prisma, frená el backend (`Ctrl+C`). Eso evita el 90% de los `EPERM`.
-
-**Diferencia entre los dos "reset":**
-- `npx prisma migrate reset` → reconstruye TODO (borra, recrea las tablas y corre el seed solo). Para cuando la base quedó rota o desincronizada.
-- `node prisma/reset-data.js` → solo vacía los datos, deja las tablas. Después tenés que recargar con `node prisma/seed.js` (o `seed2.js`).
- 
-## Notas
-
-Proyecto académico con fines educativos.
+Todo el sistema opera en `America/Argentina/Buenos_Aires`. Las fechas se almacenan en formato `TIMESTAMPTZ` y el scheduler de recordatorios respeta esta zona horaria para evitar envíos en horarios incorrectos.
