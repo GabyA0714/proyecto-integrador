@@ -7,7 +7,7 @@ import { fechaClinicaStr } from "../../config/clinica";
 import ReservaTurno from "./ReservaTurno";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { useNavigate } from "react-router-dom";
-import { fmtHora, fmtFechaLarga, parseYmd, addDays, lunesDe, ymdDeInstante } from "../../utils/fecha";
+import { fmtHora, fmtFechaLarga, parseYmd, addDays, lunesDe, ymdDeInstante, instanteParaApi } from "../../utils/fecha";
 import { GrillaAgenda, Columna, CoberturaVista, CANCELADO } from "../../components/calendario/GrillaAgenda";
 import DetalleTurnoModal from "../../components/calendario/DetalleTurnoModal";
 import client, { mensajeDeError } from "../../api/client";
@@ -593,6 +593,9 @@ const TurnosAdmin = () => {
           const appts = (slotTurnos || []).slice().sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
           const reservados = appts.filter((a) => !CANCELADO(a.status)).length;
           const color = colorDe[detalleSlot.professionalId] || colors.brand;
+          const fechaSlot = detalleSlot.fecha || new Date(detalleSlot.date).toISOString().slice(0, 10);
+          const horaSlot = (timeIso) => fmtHora(instanteParaApi(fechaSlot, new Date(timeIso).toISOString().slice(11, 16)));
+
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14 }}>
               <p style={{ margin: 0 }}>
@@ -606,7 +609,7 @@ const TurnosAdmin = () => {
                 <strong>Fecha:</strong> {fmtFechaLarga(detalleSlot.fecha)}
               </p>
               <p style={{ margin: 0 }}>
-                <strong>Horario:</strong> {fmtHora(detalleSlot.startTime)} – {fmtHora(detalleSlot.endTime)}
+                <strong>Horario:</strong> {horaSlot(detalleSlot.startTime)} – {horaSlot(detalleSlot.endTime)}
               </p>
               <p style={{ margin: 0 }}>
                 <strong>Turnos reservados:</strong>{" "}
